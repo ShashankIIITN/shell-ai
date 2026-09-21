@@ -59,8 +59,11 @@ _shell_ai_accept_line() {
         local last_status="$?"
         local last_cmd="$(fc -ln -1 2>/dev/null | sed -e 's/^[[:space:]]*//')"
         print -s "$BUFFER" # Save to history
-        BUFFER=" shell-ai fix \"$last_status\" ${(q)last_cmd}"
-        zle .accept-line
+        zle -I
+        print -P "%F{yellow}🔍 shell-ai: diagnosing failed command:%f $last_cmd"
+        shell-ai fix "$last_status" "$last_cmd"
+        BUFFER=""
+        zle redisplay
         return
     fi
 
@@ -71,16 +74,16 @@ _shell_ai_accept_line() {
             query="${query#"${query%%[![:space:]]*}"}" # strip leading space
 
             print -s "$BUFFER"
+            zle -I
             if [[ -z "$query" ]]; then
-                BUFFER=" shell-ai interactive \"$backend\""
+                shell-ai interactive "$backend"
             else
                 local -a args
                 args=("${(@Q)${(z)query}}")
-                local -a qargs
-                for a in "${args[@]}"; do qargs+=("${(q)a}"); done
-                BUFFER=" BACKEND_OVERRIDE=\"$backend\" shell-ai ${qargs[@]}"
+                BACKEND_OVERRIDE="$backend" shell-ai "${args[@]}"
             fi
-            zle .accept-line
+            BUFFER=""
+            zle redisplay
             return
         fi
     done
@@ -96,16 +99,16 @@ _shell_ai_accept_line() {
         query="${query#"${query%%[![:space:]]*}"}"
 
         print -s "$BUFFER"
+        zle -I
         if [[ -z "$query" ]]; then
-            BUFFER=" shell-ai interactive"
+            shell-ai interactive
         else
             local -a args
             args=("${(@Q)${(z)query}}")
-            local -a qargs
-            for a in "${args[@]}"; do qargs+=("${(q)a}"); done
-            BUFFER=" shell-ai ${qargs[@]}"
+            shell-ai "${args[@]}"
         fi
-        zle .accept-line
+        BUFFER=""
+        zle redisplay
         return
     fi
 
