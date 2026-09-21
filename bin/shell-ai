@@ -131,18 +131,19 @@ render_markdown() {
         return
     fi
 
+    # Explicit override
     if [ "${SHELL_AI_RENDERER}" = "builtin" ]; then
         builtin_render_markdown
-    elif command -v glow >/dev/null 2>&1; then
-        glow -s auto -w "${COLUMNS:-90}" -
-    elif command -v bat >/dev/null 2>&1; then
+        return
+    elif [ "${SHELL_AI_RENDERER}" = "bat" ] && command -v bat >/dev/null 2>&1; then
         bat -l markdown --style=plain --paging=never --color=always
-    elif command -v batcat >/dev/null 2>&1; then
-        batcat -l markdown --style=plain --paging=never --color=always
-    elif command -v mdcat >/dev/null 2>&1; then
-        mdcat -
+        return
+    fi
+
+    # Auto mode: Use glow if available, otherwise builtin
+    if command -v glow >/dev/null 2>&1; then
+        glow -s auto -w "${COLUMNS:-90}" -
     else
-        # Built-in zero-dependency renderer as universal default
         builtin_render_markdown
     fi
 }
