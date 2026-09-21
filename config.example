@@ -21,6 +21,9 @@ export SHELL_AI_PREFIX="%"
 # Disable color formatting (0 = enabled, 1 = disabled)
 export SHELL_AI_NO_COLOR="0"
 
+# Disable context storing / conversational memory (0 = enabled, 1 = disabled)
+export SHELL_AI_NO_CONTEXT="0"
+
 # Markdown renderer: auto | builtin | glow | bat | none
 # "builtin" requires ZERO extra dependencies (pure POSIX awk)
 export SHELL_AI_RENDERER="auto"

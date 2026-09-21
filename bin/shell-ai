@@ -223,6 +223,7 @@ ${C_BOLD}ACTIONS:${C_RESET}
 
 ${C_BOLD}OPTIONS:${C_RESET}
     ${C_YELLOW}-b, --backend <name>${C_RESET}     Override backend (agy, claude, ollama, copilot, custom)
+    ${C_YELLOW}-nc, --no-context${C_RESET}       Do not use or save conversation history (memory)
     ${C_YELLOW}-h, --help${C_RESET}               Show this help message
     ${C_YELLOW}-v, --version${C_RESET}            Show version information
 
@@ -247,6 +248,10 @@ while [[ $# -gt 0 ]]; do
             BACKEND_OVERRIDE="$2"
             shift 2
             ;;
+        -nc|--no-context)
+            NO_CONTEXT_OVERRIDE="1"
+            shift 1
+            ;;
         -h|--help)
             show_help
             return 0 2>/dev/null || exit 0
@@ -269,10 +274,12 @@ handle_ask_with_memory() {
     local raw_prompt="$2"
     local history_prompt="$raw_prompt"
 
-    if [ -f "$HISTORY_FILE" ]; then
-        history_prompt="$(cat "$HISTORY_FILE")
+    if [ "${SHELL_AI_NO_CONTEXT:-0}" != "1" ] && [ "${NO_CONTEXT_OVERRIDE:-0}" != "1" ]; then
+        if [ -f "$HISTORY_FILE" ]; then
+            history_prompt="$(cat "$HISTORY_FILE")
 
 Current Query: $raw_prompt"
+        fi
     fi
 
     local tmp_out
@@ -288,16 +295,18 @@ Current Query: $raw_prompt"
         done | render_markdown
     fi
 
-    # Save to history
-    {
-        echo "Previous Query: $raw_prompt"
-        echo "Previous Answer:"
-        cat "$tmp_out"
-        echo "---"
-    } >> "$HISTORY_FILE"
+    if [ "${SHELL_AI_NO_CONTEXT:-0}" != "1" ] && [ "${NO_CONTEXT_OVERRIDE:-0}" != "1" ]; then
+        # Save to history
+        {
+            echo "Previous Query: $raw_prompt"
+            echo "Previous Answer:"
+            cat "$tmp_out"
+            echo "---"
+        } >> "$HISTORY_FILE"
 
-    # Keep only the last 3 pairs
-    awk 'BEGIN {RS="---\n"} {if (length($0) > 0) a[NR]=$0} END {for(i=NR-2; i<=NR; i++) if(i in a) printf "%s---\n", a[i]}' "$HISTORY_FILE" > "${HISTORY_FILE}.tmp" && mv "${HISTORY_FILE}.tmp" "$HISTORY_FILE"
+        # Keep only the last 3 pairs
+        awk 'BEGIN {RS="---\n"} {if (length($0) > 0) a[NR]=$0} END {for(i=NR-2; i<=NR; i++) if(i in a) printf "%s---\n", a[i]}' "$HISTORY_FILE" > "${HISTORY_FILE}.tmp" && mv "${HISTORY_FILE}.tmp" "$HISTORY_FILE"
+    fi
 
     rm -f "$tmp_out"
 }
