@@ -67,7 +67,7 @@ _shell_ai_accept_line() {
     fi
 
     # Check for Provider-Specific Prefix: %agy, %claude, %ollama, %copilot
-    for backend in agy claude ollama copilot; do
+    for backend in agy claude ollama copilot custom; do
         if [[ "$trimmed" == "${SHELL_AI_PREFIX}${backend}" ]] || [[ "$trimmed" == "${SHELL_AI_PREFIX}${backend} "* ]]; then
             local query="${trimmed#"${SHELL_AI_PREFIX}${backend}"}"
             query="${query#"${query%%[![:space:]]*}"}" # strip leading space
@@ -78,8 +78,11 @@ _shell_ai_accept_line() {
                 zle redisplay
                 shell-ai interactive "$backend"
             else
+                local -a args
+                args=("${(@Q)${(z)query}}")
+
                 print ""
-                shell-ai -b "$backend" ask "$query"
+                shell-ai -b "$backend" "${args[@]}"
                 BUFFER=""
                 zle redisplay
             fi
@@ -102,8 +105,12 @@ _shell_ai_accept_line() {
             zle redisplay
             shell-ai interactive
         else
+            # Parse the query into arguments, handling quotes properly
+            local -a args
+            args=("${(@Q)${(z)query}}")
+
             print ""
-            shell-ai ask "$query"
+            shell-ai "${args[@]}"
             BUFFER=""
             zle redisplay
         fi
