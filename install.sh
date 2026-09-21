@@ -85,6 +85,22 @@ elif [ "$CURRENT_SHELL" = "bash" ] || [ -f "$HOME/.bashrc" ]; then
     fi
 fi
 
+if [ "$CURRENT_SHELL" = "fish" ] || [ -d "$HOME/.config/fish" ]; then
+    FISH_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/fish/config.fish"
+    mkdir -p "$(dirname "$FISH_CONF")"
+    SOURCE_LINE="test -f \"$SOURCE_DIR/shell-ai.fish\"; and source \"$SOURCE_DIR/shell-ai.fish\""
+    if ! grep -q "shell-ai.fish" "$FISH_CONF" 2>/dev/null; then
+        {
+            echo ""
+            echo "# shell-ai integration"
+            echo "$SOURCE_LINE"
+        } >> "$FISH_CONF"
+        echo -e "${GREEN}✔${RESET} Added plugin loader to ${BOLD}$FISH_CONF${RESET}"
+    else
+        echo -e "${BLUE}ℹ${RESET} Plugin loader already present in $FISH_CONF"
+    fi
+fi
+
 echo ""
 echo -e "${GREEN}${BOLD}🚀 shell-ai installation complete!${RESET}"
 echo ""

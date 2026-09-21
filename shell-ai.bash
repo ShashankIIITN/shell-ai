@@ -28,8 +28,8 @@ _shell_ai_bash_suggest_cmd() {
     fi
 }
 
-# Bind Ctrl+G in Bash
-bind -x '"\C-g": _shell_ai_bash_suggest_cmd'
+: "${SHELL_AI_KEYBIND:=\C-g}"
+bind -x '"'"$SHELL_AI_KEYBIND"'": _shell_ai_bash_suggest_cmd'
 
 # Wrapper Functions
 ai() {

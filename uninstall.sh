@@ -34,5 +34,12 @@ if [ -f "$HOME/.bashrc" ]; then
     echo "Cleaned shell-ai references from ~/.bashrc"
 fi
 
+# Clean config.fish
+FISH_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/fish/config.fish"
+if [ -f "$FISH_CONF" ]; then
+    sed -i '/shell-ai/d' "$FISH_CONF"
+    echo "Cleaned shell-ai references from $FISH_CONF"
+fi
+
 echo "Optional: If you want to delete your configuration, run: rm -rf $CONFIG_DIR"
 echo "shell-ai uninstalled successfully."

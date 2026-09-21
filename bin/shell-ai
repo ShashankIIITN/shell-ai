@@ -23,6 +23,9 @@ if [ -f "$USER_CONFIG_DIR/config" ]; then
     source "$USER_CONFIG_DIR/config"
 fi
 
+# Temporary storage for context memory
+HISTORY_FILE="${TMPDIR:-/tmp}/shell-ai-history.txt"
+
 # Load backend adapters
 for b in "$SHELL_AI_ROOT"/backends/*.sh; do
     if [ -f "$b" ]; then
@@ -259,10 +262,51 @@ done
 
 ACTIVE_BACKEND="${BACKEND_OVERRIDE:-$(get_default_backend)}"
 
+# Helper: Handle memory context for ask queries
+handle_ask_with_memory() {
+    local fn="$1"
+    local raw_prompt="$2"
+    local history_prompt="$raw_prompt"
+
+    if [ -f "$HISTORY_FILE" ]; then
+        history_prompt="$(cat "$HISTORY_FILE")
+
+Current Query: $raw_prompt"
+    fi
+
+    local tmp_out
+    tmp_out=$(mktemp)
+
+    # Fetch output via spinner
+    run_with_spinner "$fn" "$history_prompt" > "$tmp_out"
+
+    # Render it immediately to stdout
+    cat "$tmp_out" | render_markdown
+
+    # Save to history
+    {
+        echo "Previous Query: $raw_prompt"
+        echo "Previous Answer:"
+        cat "$tmp_out"
+        echo "---"
+    } >> "$HISTORY_FILE"
+
+    # Keep only the last 3 pairs
+    awk 'BEGIN {RS="---\n"} {if (length($0) > 0) a[NR]=$0} END {for(i=NR-2; i<=NR; i++) if(i in a) printf "%s---\n", a[i]}' "$HISTORY_FILE" > "${HISTORY_FILE}.tmp" && mv "${HISTORY_FILE}.tmp" "$HISTORY_FILE"
+
+    rm -f "$tmp_out"
+}
+
 # Route actions
 ACTION="$1"
 
 case "$ACTION" in
+    clear)
+        rm -f "$HISTORY_FILE"
+        echo -e "${C_GREEN}✔${C_RESET} shell-ai temporary memory cleared."
+        exit 0
+        ;;
+
     list-backends)
         echo -e "${C_BOLD}Available Backends:${C_RESET}"
         default_b=$(get_default_backend)
@@ -302,7 +346,25 @@ case "$ACTION" in
         fi
         fn="backend_${ACTIVE_BACKEND}_cmd"
         if type "$fn" >/dev/null 2>&1; then
-            "$fn" "$PROMPT"
+            if [ ! -t 1 ] || [ "${SHELL_AI_RAW:-0}" = "1" ]; then
+                # Raw output for Zsh/Bash plugin buffer injection
+                "$fn" "$PROMPT"
+            else
+                # Interactive CLI mode
+                RAW_CMD=$(run_with_spinner "$fn" "$PROMPT")
+                echo -e "\nProposed Command:\n${C_GREEN}${C_BOLD}${RAW_CMD}${C_RESET}\n"
+                read -r -p "Action: [e]xecute, [c]opy, [a]bort: " action </dev/tty
+                case "$action" in
+                    [eE]*) eval "$RAW_CMD" ;;
+                    [cC]*) 
+                        if command -v pbcopy >/dev/null 2>&1; then echo "$RAW_CMD" | pbcopy
+                        elif command -v xclip >/dev/null 2>&1; then echo "$RAW_CMD" | xclip -sel clip
+                        elif command -v wl-copy >/dev/null 2>&1; then echo "$RAW_CMD" | wl-copy
+                        else echo "No clipboard tool found (pbcopy/xclip/wl-copy)."; fi
+                        ;;
+                    *) echo "Aborted." ;;
+                esac
+            fi
         else
             echo "Error: Backend '$ACTIVE_BACKEND' does not support command generation." >&2
             exit 1
@@ -332,7 +394,7 @@ case "$ACTION" in
         fi
         fn="backend_${ACTIVE_BACKEND}_ask"
         if type "$fn" >/dev/null 2>&1; then
-            run_with_spinner "$fn" "$PROMPT" | render_markdown
+            handle_ask_with_memory "$fn" "$PROMPT"
         else
             echo "Error: Unknown backend '$ACTIVE_BACKEND'" >&2
             exit 1
@@ -349,7 +411,7 @@ case "$ACTION" in
         PROMPT="$*"
         fn="backend_${ACTIVE_BACKEND}_ask"
         if type "$fn" >/dev/null 2>&1; then
-            run_with_spinner "$fn" "$PROMPT" | render_markdown
+            handle_ask_with_memory "$fn" "$PROMPT"
         else
             echo "Error: Unknown backend '$ACTIVE_BACKEND'" >&2
             exit 1
