@@ -278,11 +278,15 @@ Current Query: $raw_prompt"
     local tmp_out
     tmp_out=$(mktemp)
 
-    # Fetch output via spinner and stream it line-by-line to both renderer and tmp file
-    run_with_spinner "$fn" "$history_prompt" | while IFS= read -r line || [ -n "$line" ]; do
-        printf "%s\n" "$line" >> "$tmp_out"
-        printf "%s\n" "$line"
-    done | render_markdown
+    # Fetch output via spinner and stream it
+    if command -v stdbuf >/dev/null 2>&1 && command -v fold >/dev/null 2>&1; then
+        run_with_spinner "$fn" "$history_prompt" | stdbuf -o0 fold -w "${COLUMNS:-90}" -s | stdbuf -o0 tee "$tmp_out" | render_markdown
+    else
+        run_with_spinner "$fn" "$history_prompt" | while IFS= read -r line || [ -n "$line" ]; do
+            printf "%s\n" "$line" >> "$tmp_out"
+            printf "%s\n" "$line"
+        done | render_markdown
+    fi
 
     # Save to history
     {

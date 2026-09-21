@@ -60,6 +60,7 @@ _shell_ai_accept_line() {
         local last_cmd="$(fc -ln -1 2>/dev/null | sed -e 's/^[[:space:]]*//')"
         print -s "$BUFFER" # Save to history
         zle -I
+        print ""
         print -P "%F{yellow}🔍 shell-ai: diagnosing failed command:%f $last_cmd"
         shell-ai fix "$last_status" "$last_cmd"
         BUFFER=""
@@ -75,6 +76,7 @@ _shell_ai_accept_line() {
 
             print -s "$BUFFER"
             zle -I
+            print ""
             if [[ -z "$query" ]]; then
                 shell-ai interactive "$backend"
             else
@@ -100,6 +102,7 @@ _shell_ai_accept_line() {
 
         print -s "$BUFFER"
         zle -I
+        print ""
         if [[ -z "$query" ]]; then
             shell-ai interactive
         else
