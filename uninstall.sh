@@ -22,22 +22,22 @@ if [ -L "$OMZ_PLUGIN" ]; then
     echo "Removed $OMZ_PLUGIN"
 fi
 
-# Clean ~/.zshrc
+# Clean ~/.zshrc (only remove installer-added lines, not user comments)
 if [ -f "$HOME/.zshrc" ]; then
-    sed -i '/shell-ai/d' "$HOME/.zshrc"
+    sed -i '/# shell-ai integration$/d; /shell-ai\.plugin\.zsh/d' "$HOME/.zshrc"
     echo "Cleaned shell-ai references from ~/.zshrc"
 fi
 
 # Clean ~/.bashrc
 if [ -f "$HOME/.bashrc" ]; then
-    sed -i '/shell-ai/d' "$HOME/.bashrc"
+    sed -i '/# shell-ai integration$/d; /shell-ai\.bash/d' "$HOME/.bashrc"
     echo "Cleaned shell-ai references from ~/.bashrc"
 fi
 
 # Clean config.fish
 FISH_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/fish/config.fish"
 if [ -f "$FISH_CONF" ]; then
-    sed -i '/shell-ai/d' "$FISH_CONF"
+    sed -i '/# shell-ai integration$/d; /shell-ai\.fish/d' "$FISH_CONF"
     echo "Cleaned shell-ai references from $FISH_CONF"
 fi
 
