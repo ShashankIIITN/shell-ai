@@ -1,0 +1,29 @@
+name: Lint and Test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  shellcheck:
+    name: ShellCheck Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck
+        run: |
+          shellcheck -e SC1090,SC1091 bin/shell-ai backends/*.sh install.sh uninstall.sh
+
+  test-cli:
+    name: CLI Functionality Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test shell-ai --help and list-backends
+        run: |
+          chmod +x bin/shell-ai install.sh uninstall.sh
+          ./bin/shell-ai --help
+          ./bin/shell-ai list-backends
+          ./bin/shell-ai --version

@@ -1,0 +1,27 @@
+# ==============================================================================
+# shell-ai Configuration File
+# Location: ~/.config/shell-ai/config
+# ==============================================================================
+
+# Default backend provider to use for `%ai` and `ai` commands
+# Options: agy | claude | ollama | copilot | custom
+export SHELL_AI_DEFAULT_BACKEND="agy"
+
+# Default model when using Ollama backend
+export SHELL_AI_OLLAMA_MODEL="qwen2.5-coder"
+
+# Hotkey for converting current prompt into an executable command
+# Default is Ctrl+G ("^G")
+export SHELL_AI_KEYBIND="^G"
+
+# Prefix trigger symbol for Zsh line editor (default is "%")
+# Example: typing `%ai`, `%agy`, `%claude`
+export SHELL_AI_PREFIX="%"
+
+# Disable color formatting (0 = enabled, 1 = disabled)
+export SHELL_AI_NO_COLOR="0"
+
+# Custom backend configuration (if SHELL_AI_DEFAULT_BACKEND="custom")
+# export SHELL_AI_CUSTOM_ASK_CMD="python3 /path/to/my_ai.py --ask"
+# export SHELL_AI_CUSTOM_CMD_CMD="python3 /path/to/my_ai.py --generate-cmd"
+# export SHELL_AI_CUSTOM_INTERACTIVE_CMD="my_ai_tui"

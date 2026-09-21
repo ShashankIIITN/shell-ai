@@ -1,0 +1,228 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# shell-ai: Universal Terminal AI Dispatcher
+# ==============================================================================
+set -e
+
+# Version
+SHELL_AI_VERSION="1.0.0"
+
+# Find root directory
+SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+while [ -h "$SCRIPT_PATH" ]; do
+    DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ $SCRIPT_PATH != /* ]] && SCRIPT_PATH="$DIR/$SCRIPT_PATH"
+done
+SHELL_AI_ROOT="$(cd -P "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+
+# Load user config if present
+USER_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/shell-ai"
+if [ -f "$USER_CONFIG_DIR/config" ]; then
+    # shellcheck source=/dev/null
+    source "$USER_CONFIG_DIR/config"
+fi
+
+# Load backend adapters
+for b in "$SHELL_AI_ROOT"/backends/*.sh; do
+    if [ -f "$b" ]; then
+        # shellcheck source=/dev/null
+        source "$b"
+    fi
+done
+
+# ANSI color codes
+if [ -t 1 ] && [ "${SHELL_AI_NO_COLOR:-0}" != "1" ]; then
+    C_BLUE='\033[0;34m'
+    C_GREEN='\033[0;32m'
+    C_YELLOW='\033[0;33m'
+    C_RED='\033[0;31m'
+    C_BOLD='\033[1m'
+    C_DIM='\033[2m'
+    C_RESET='\033[0m'
+else
+    C_BLUE=''
+    C_GREEN=''
+    C_YELLOW=''
+    C_RED=''
+    C_BOLD=''
+    C_DIM=''
+    C_RESET=''
+fi
+
+# Helper: Detect best default backend if not explicitly set
+get_default_backend() {
+    if [ -n "$SHELL_AI_DEFAULT_BACKEND" ]; then
+        echo "$SHELL_AI_DEFAULT_BACKEND"
+        return
+    fi
+
+    if backend_agy_is_available; then
+        echo "agy"
+    elif backend_claude_is_available; then
+        echo "claude"
+    elif backend_ollama_is_available; then
+        echo "ollama"
+    elif backend_copilot_is_available; then
+        echo "copilot"
+    elif backend_custom_is_available; then
+        echo "custom"
+    else
+        echo "agy" # fallback
+    fi
+}
+
+show_help() {
+    cat <<EOF
+${C_BOLD}shell-ai${C_RESET} v${SHELL_AI_VERSION} - Universal AI integration for your terminal
+
+${C_BOLD}USAGE:${C_RESET}
+    shell-ai [options] <action> [arguments...]
+    shell-ai "your question here"
+
+${C_BOLD}ACTIONS:${C_RESET}
+    ${C_GREEN}ask${C_RESET} <query>               Ask a question and get an explanation
+    ${C_GREEN}cmd${C_RESET} <query>               Generate a raw shell command (no markdown)
+    ${C_GREEN}fix${C_RESET} [exit_code] [cmd]     Diagnose a failed command and suggest a fix
+    ${C_GREEN}interactive${C_RESET} [backend]     Launch the full interactive agent session
+    ${C_GREEN}list-backends${C_RESET}           Show available backends and system status
+
+${C_BOLD}OPTIONS:${C_RESET}
+    ${C_YELLOW}-b, --backend <name>${C_RESET}     Override backend (agy, claude, ollama, copilot, custom)
+    ${C_YELLOW}-h, --help${C_RESET}               Show this help message
+    ${C_YELLOW}-v, --version${C_RESET}            Show version information
+
+${C_BOLD}SUPPORTED BACKENDS:${C_RESET}
+    • agy       (Google Antigravity CLI)
+    • claude    (Anthropic Claude Code CLI)
+    • ollama    (Local LLMs e.g. Qwen, Llama 3)
+    • copilot   (GitHub CLI extension)
+    • custom    (User configured script or curl call)
+
+${C_BOLD}CONFIG FILE:${C_RESET}
+    ${USER_CONFIG_DIR}/config
+EOF
+}
+
+# Parse options
+BACKEND_OVERRIDE=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -b|--backend)
+            BACKEND_OVERRIDE="$2"
+            shift 2
+            ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -v|--version)
+            echo "shell-ai version $SHELL_AI_VERSION"
+            exit 0
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+ACTIVE_BACKEND="${BACKEND_OVERRIDE:-$(get_default_backend)}"
+
+# Route actions
+ACTION="$1"
+
+case "$ACTION" in
+    list-backends)
+        echo -e "${C_BOLD}Available Backends:${C_RESET}"
+        default_b=$(get_default_backend)
+        for b in agy claude ollama copilot custom; do
+            is_avail="no"
+            if "backend_${b}_is_available" 2>/dev/null; then
+                is_avail="${C_GREEN}installed${C_RESET}"
+            else
+                is_avail="${C_DIM}not found${C_RESET}"
+            fi
+            
+            is_def=""
+            if [ "$b" = "$default_b" ]; then
+                is_def="${C_YELLOW}(default)${C_RESET}"
+            fi
+            printf "  %-10s : %-20b %b\n" "$b" "$is_avail" "$is_def"
+        done
+        ;;
+
+    interactive)
+        shift
+        target_b="${1:-$ACTIVE_BACKEND}"
+        if type "backend_${target_b}_interactive" >/dev/null 2>&1; then
+            "backend_${target_b}_interactive"
+        else
+            echo "Error: Unknown backend '$target_b'" >&2
+            exit 1
+        fi
+        ;;
+
+    cmd)
+        shift
+        PROMPT="$*"
+        if [ -z "$PROMPT" ]; then
+            echo "Error: prompt required for 'cmd'" >&2
+            exit 1
+        fi
+        fn="backend_${ACTIVE_BACKEND}_cmd"
+        if type "$fn" >/dev/null 2>&1; then
+            "$fn" "$PROMPT"
+        else
+            echo "Error: Backend '$ACTIVE_BACKEND' does not support command generation." >&2
+            exit 1
+        fi
+        ;;
+
+    fix)
+        shift
+        EXIT_CODE="${1:-1}"
+        LAST_CMD="$2"
+        CONTEXT="$3"
+        fn="backend_${ACTIVE_BACKEND}_fix"
+        if type "$fn" >/dev/null 2>&1; then
+            "$fn" "$LAST_CMD" "$EXIT_CODE" "$CONTEXT"
+        else
+            echo "Error: Backend '$ACTIVE_BACKEND' does not support fix." >&2
+            exit 1
+        fi
+        ;;
+
+    ask)
+        shift
+        PROMPT="$*"
+        if [ -z "$PROMPT" ]; then
+            echo "Error: prompt required for 'ask'" >&2
+            exit 1
+        fi
+        fn="backend_${ACTIVE_BACKEND}_ask"
+        if type "$fn" >/dev/null 2>&1; then
+            "$fn" "$PROMPT"
+        else
+            echo "Error: Unknown backend '$ACTIVE_BACKEND'" >&2
+            exit 1
+        fi
+        ;;
+
+    "")
+        show_help
+        exit 0
+        ;;
+
+    *)
+        # Default fallback: treat entire argument string as an 'ask' query
+        PROMPT="$*"
+        fn="backend_${ACTIVE_BACKEND}_ask"
+        if type "$fn" >/dev/null 2>&1; then
+            "$fn" "$PROMPT"
+        else
+            echo "Error: Unknown backend '$ACTIVE_BACKEND'" >&2
+            exit 1
+        fi
+        ;;
+esac

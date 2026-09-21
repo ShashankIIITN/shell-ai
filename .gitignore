@@ -1,0 +1,19 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor & IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs & temp files
+*.log
+*.tmp
+scratch/
+
+# Local configuration overrides
+config.local
+.env
