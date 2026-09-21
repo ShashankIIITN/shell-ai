@@ -62,9 +62,11 @@ if [ -d "$OMZ_CUSTOM/plugins" ]; then
 elif [ "$CURRENT_SHELL" = "zsh" ] || [ -f "$HOME/.zshrc" ]; then
     SOURCE_LINE="[ -f \"$SOURCE_DIR/shell-ai.plugin.zsh\" ] && source \"$SOURCE_DIR/shell-ai.plugin.zsh\""
     if ! grep -q "shell-ai.plugin.zsh" "$HOME/.zshrc" 2>/dev/null; then
-        echo "" >> "$HOME/.zshrc"
-        echo "# shell-ai integration" >> "$HOME/.zshrc"
-        echo "$SOURCE_LINE" >> "$HOME/.zshrc"
+        {
+            echo ""
+            echo "# shell-ai integration"
+            echo "$SOURCE_LINE"
+        } >> "$HOME/.zshrc"
         echo -e "${GREEN}✔${RESET} Added plugin loader to ${BOLD}~/.zshrc${RESET}"
     else
         echo -e "${BLUE}ℹ${RESET} Plugin loader already present in ~/.zshrc"
@@ -72,9 +74,11 @@ elif [ "$CURRENT_SHELL" = "zsh" ] || [ -f "$HOME/.zshrc" ]; then
 elif [ "$CURRENT_SHELL" = "bash" ] || [ -f "$HOME/.bashrc" ]; then
     SOURCE_LINE="[ -f \"$SOURCE_DIR/shell-ai.bash\" ] && source \"$SOURCE_DIR/shell-ai.bash\""
     if ! grep -q "shell-ai.bash" "$HOME/.bashrc" 2>/dev/null; then
-        echo "" >> "$HOME/.bashrc"
-        echo "# shell-ai integration" >> "$HOME/.bashrc"
-        echo "$SOURCE_LINE" >> "$HOME/.bashrc"
+        {
+            echo ""
+            echo "# shell-ai integration"
+            echo "$SOURCE_LINE"
+        } >> "$HOME/.bashrc"
         echo -e "${GREEN}✔${RESET} Added plugin loader to ${BOLD}~/.bashrc${RESET}"
     else
         echo -e "${BLUE}ℹ${RESET} Plugin loader already present in ~/.bashrc"

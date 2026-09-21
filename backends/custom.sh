@@ -20,6 +20,7 @@ backend_custom_ask() {
 }
 
 backend_custom_cmd() {
+    # shellcheck disable=SC2034
     local prompt="$*"
     if [ -z "$SHELL_AI_CUSTOM_CMD_CMD" ]; then
         if [ -n "$SHELL_AI_CUSTOM_ASK_CMD" ]; then
