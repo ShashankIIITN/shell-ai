@@ -180,12 +180,8 @@ render_markdown() {
         return
     fi
 
-    # Auto mode: Use glow if available, otherwise builtin
-    if command -v glow >/dev/null 2>&1; then
-        glow -s auto -w "${COLUMNS:-90}" -
-    else
-        builtin_render_markdown
-    fi
+    # Auto mode: Use builtin by default because glow blocks real-time streaming
+    builtin_render_markdown
 }
 
 # Helper: Detect best default backend if not explicitly set
