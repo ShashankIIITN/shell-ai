@@ -50,6 +50,42 @@ else
     C_RESET=''
 fi
 
+# Helper: Run command with a visual spinner on stderr
+run_with_spinner() {
+    # Skip spinner if not attached to a TTY or raw mode requested
+    if [ ! -t 2 ] || [ "${SHELL_AI_RAW:-0}" = "1" ]; then
+        "$@"
+        return
+    fi
+
+    local tmp_out tmp_err
+    tmp_out=$(mktemp)
+    tmp_err=$(mktemp)
+
+    "$@" > "$tmp_out" 2> "$tmp_err" &
+    local pid=$!
+
+    local spinner=( "⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏" )
+    local i=0
+
+    # Hide cursor
+    tput civis 2>/dev/null || true
+
+    while kill -0 $pid 2>/dev/null; do
+        printf "\r\033[1;36m%s\033[0m \033[2mthinking...\033[0m" "${spinner[$i]}" >&2
+        i=$(( (i + 1) % 10 ))
+        sleep 0.1
+    done
+
+    # Restore cursor and clear line
+    tput cnorm 2>/dev/null || true
+    printf "\r\033[K" >&2
+
+    cat "$tmp_out"
+    cat "$tmp_err" >&2
+    rm -f "$tmp_out" "$tmp_err"
+}
+
 # Helper: Built-in Zero-Dependency ANSI Markdown Renderer (using standard POSIX awk)
 builtin_render_markdown() {
     awk '
@@ -284,7 +320,7 @@ case "$ACTION" in
         CONTEXT="$3"
         fn="backend_${ACTIVE_BACKEND}_fix"
         if type "$fn" >/dev/null 2>&1; then
-            "$fn" "$LAST_CMD" "$EXIT_CODE" "$CONTEXT" | render_markdown
+            run_with_spinner "$fn" "$LAST_CMD" "$EXIT_CODE" "$CONTEXT" | render_markdown
         else
             echo "Error: Backend '$ACTIVE_BACKEND' does not support fix." >&2
             exit 1
@@ -300,7 +336,7 @@ case "$ACTION" in
         fi
         fn="backend_${ACTIVE_BACKEND}_ask"
         if type "$fn" >/dev/null 2>&1; then
-            "$fn" "$PROMPT" | render_markdown
+            run_with_spinner "$fn" "$PROMPT" | render_markdown
         else
             echo "Error: Unknown backend '$ACTIVE_BACKEND'" >&2
             exit 1
@@ -317,7 +353,7 @@ case "$ACTION" in
         PROMPT="$*"
         fn="backend_${ACTIVE_BACKEND}_ask"
         if type "$fn" >/dev/null 2>&1; then
-            "$fn" "$PROMPT" | render_markdown
+            run_with_spinner "$fn" "$PROMPT" | render_markdown
         else
             echo "Error: Unknown backend '$ACTIVE_BACKEND'" >&2
             exit 1
