@@ -66,7 +66,7 @@ run_with_spinner() {
     # We run the command and pipe its stdout directly to us. Stderr goes to terminal naturally.
     "$@" | while true; do
         local ret=0
-        IFS= read -r -t 0.1 -d "" -N 1 char || ret=$?
+        IFS= read -r -t 0.1 -d "" -N1 char || ret=$?
         
         if [ -n "$char" ]; then
             # We got our first byte!
@@ -254,10 +254,12 @@ while [[ $# -gt 0 ]]; do
             ;;
         -h|--help)
             show_help
+            # shellcheck disable=SC2317
             return 0 2>/dev/null || exit 0
             ;;
         -v|--version)
             echo "shell-ai version $SHELL_AI_VERSION"
+            # shellcheck disable=SC2317
             return 0 2>/dev/null || exit 0
             ;;
         *)
@@ -321,7 +323,8 @@ case "$ACTION" in
     clear)
         rm -f "$HISTORY_FILE"
         echo -e "${C_GREEN}✔${C_RESET} shell-ai temporary memory cleared."
-        return 0 2>/dev/null || exit 0
+        # shellcheck disable=SC2317
+            return 0 2>/dev/null || exit 0
         ;;
 
     list-backends)
@@ -428,7 +431,8 @@ case "$ACTION" in
 
     "")
         show_help
-        return 0 2>/dev/null || exit 0
+        # shellcheck disable=SC2317
+            return 0 2>/dev/null || exit 0
         ;;
 
     *)
