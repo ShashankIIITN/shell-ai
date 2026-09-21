@@ -238,7 +238,7 @@ EOF
 }
 
 # Parse options
-BACKEND_OVERRIDE=""
+: "${BACKEND_OVERRIDE:=}"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
