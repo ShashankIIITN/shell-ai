@@ -50,6 +50,26 @@ else
     C_RESET=''
 fi
 
+# Helper: Render markdown if tools like glow, mdcat, or bat are installed
+render_markdown() {
+    if [ ! -t 1 ] || [ "${SHELL_AI_RAW:-0}" = "1" ]; then
+        cat
+        return
+    fi
+
+    if command -v glow >/dev/null 2>&1; then
+        glow -s auto -w "${COLUMNS:-90}" -
+    elif command -v mdcat >/dev/null 2>&1; then
+        mdcat -
+    elif command -v bat >/dev/null 2>&1; then
+        bat -l markdown --style=plain --paging=never --color=always
+    elif command -v batcat >/dev/null 2>&1; then
+        batcat -l markdown --style=plain --paging=never --color=always
+    else
+        cat
+    fi
+}
+
 # Helper: Detect best default backend if not explicitly set
 get_default_backend() {
     if [ -n "$SHELL_AI_DEFAULT_BACKEND" ]; then
@@ -186,7 +206,7 @@ case "$ACTION" in
         CONTEXT="$3"
         fn="backend_${ACTIVE_BACKEND}_fix"
         if type "$fn" >/dev/null 2>&1; then
-            "$fn" "$LAST_CMD" "$EXIT_CODE" "$CONTEXT"
+            "$fn" "$LAST_CMD" "$EXIT_CODE" "$CONTEXT" | render_markdown
         else
             echo "Error: Backend '$ACTIVE_BACKEND' does not support fix." >&2
             exit 1
@@ -202,7 +222,7 @@ case "$ACTION" in
         fi
         fn="backend_${ACTIVE_BACKEND}_ask"
         if type "$fn" >/dev/null 2>&1; then
-            "$fn" "$PROMPT"
+            "$fn" "$PROMPT" | render_markdown
         else
             echo "Error: Unknown backend '$ACTIVE_BACKEND'" >&2
             exit 1
@@ -219,7 +239,7 @@ case "$ACTION" in
         PROMPT="$*"
         fn="backend_${ACTIVE_BACKEND}_ask"
         if type "$fn" >/dev/null 2>&1; then
-            "$fn" "$PROMPT"
+            "$fn" "$PROMPT" | render_markdown
         else
             echo "Error: Unknown backend '$ACTIVE_BACKEND'" >&2
             exit 1
