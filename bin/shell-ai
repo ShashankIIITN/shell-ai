@@ -65,8 +65,8 @@ run_with_spinner() {
     
     # We run the command and pipe its stdout directly to us. Stderr goes to terminal naturally.
     "$@" | while true; do
-        IFS= read -r -t 0.1 -d "" -N 1 char
-        local ret=$?
+        local ret=0
+        IFS= read -r -t 0.1 -d "" -N 1 char || ret=$?
         
         if [ -n "$char" ]; then
             # We got our first byte!
