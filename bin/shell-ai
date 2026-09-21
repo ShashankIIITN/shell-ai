@@ -50,23 +50,100 @@ else
     C_RESET=''
 fi
 
-# Helper: Render markdown if tools like glow, mdcat, or bat are installed
+# Helper: Built-in Zero-Dependency ANSI Markdown Renderer (using standard POSIX awk)
+builtin_render_markdown() {
+    awk '
+    BEGIN {
+        BOLD="\033[1m"; RESET="\033[0m"; DIM="\033[2m"
+        BLUE="\033[1;34m"; CYAN="\033[1;36m"; YELLOW="\033[1;33m"; GREEN="\033[32m"
+        in_code=0
+    }
+    {
+        line = $0
+        # Code block toggle (supports indented code blocks)
+        if (line ~ /^[[:space:]]*```/) {
+            if (in_code == 0) {
+                in_code = 1
+                match(line, /```[a-zA-Z0-9_-]*/)
+                lang = substr(line, RSTART + 3, RLENGTH - 3)
+                if (lang != "") print DIM "  ╭─ " lang RESET
+                else print DIM "  ╭────────────────────────────────────" RESET
+            } else {
+                in_code = 0
+                print DIM "  ╰────────────────────────────────────" RESET
+            }
+            next
+        }
+        if (in_code) {
+            sub(/^[[:space:]]{0,4}/, "", line)
+            print "  │ " GREEN line RESET
+            next
+        }
+        # Headers
+        if (line ~ /^# /) {
+            sub(/^# /, "", line)
+            print "\n" BLUE BOLD "■ " toupper(line) RESET
+            next
+        }
+        if (line ~ /^## /) {
+            sub(/^## /, "", line)
+            print "\n" CYAN BOLD "▸ " line RESET
+            next
+        }
+        if (line ~ /^### /) {
+            sub(/^### /, "", line)
+            print "\n" YELLOW BOLD "▪ " line RESET
+            next
+        }
+        # Horizontal rule
+        if (line ~ /^---+$/) {
+            print DIM "  ────────────────────────────────────────" RESET
+            next
+        }
+        # Blockquotes
+        if (line ~ /^[[:space:]]*>[[:space:]]?/) {
+            sub(/^[[:space:]]*>[[:space:]]?/, "", line)
+            print DIM "  │ " RESET line
+            next
+        }
+        # Bullets
+        if (line ~ /^[[:space:]]*[\*\-][[:space:]]/) {
+            sub(/^[[:space:]]*[\*\-][[:space:]]/, "  • ", line)
+        }
+        # Inline code
+        while (match(line, /`[^`]+`/)) {
+            code = substr(line, RSTART + 1, RLENGTH - 2)
+            line = substr(line, 1, RSTART - 1) CYAN code RESET substr(line, RSTART + RLENGTH)
+        }
+        # Bold **text**
+        while (match(line, /\*\*[^\*]+\*\*/)) {
+            txt = substr(line, RSTART + 2, RLENGTH - 4)
+            line = substr(line, 1, RSTART - 1) BOLD txt RESET substr(line, RSTART + RLENGTH)
+        }
+        print line
+    }'
+}
+
+# Helper: Route markdown rendering
 render_markdown() {
-    if [ ! -t 1 ] || [ "${SHELL_AI_RAW:-0}" = "1" ]; then
+    if [ ! -t 1 ] || [ "${SHELL_AI_RAW:-0}" = "1" ] || [ "${SHELL_AI_RENDERER}" = "none" ]; then
         cat
         return
     fi
 
-    if command -v glow >/dev/null 2>&1; then
+    if [ "${SHELL_AI_RENDERER}" = "builtin" ]; then
+        builtin_render_markdown
+    elif command -v glow >/dev/null 2>&1; then
         glow -s auto -w "${COLUMNS:-90}" -
-    elif command -v mdcat >/dev/null 2>&1; then
-        mdcat -
     elif command -v bat >/dev/null 2>&1; then
         bat -l markdown --style=plain --paging=never --color=always
     elif command -v batcat >/dev/null 2>&1; then
         batcat -l markdown --style=plain --paging=never --color=always
+    elif command -v mdcat >/dev/null 2>&1; then
+        mdcat -
     else
-        cat
+        # Built-in zero-dependency renderer as universal default
+        builtin_render_markdown
     fi
 }
 
