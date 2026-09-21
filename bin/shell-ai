@@ -69,7 +69,7 @@ run_with_spinner() {
     local i=0
 
     # Hide cursor
-    tput civis 2>/dev/null || true
+    tput civis >&2 2>/dev/null || true
 
     while kill -0 $pid 2>/dev/null; do
         printf "\r\033[1;36m%s\033[0m \033[2mthinking...\033[0m" "${spinner[$i]}" >&2
@@ -78,7 +78,7 @@ run_with_spinner() {
     done
 
     # Restore cursor and clear line
-    tput cnorm 2>/dev/null || true
+    tput cnorm >&2 2>/dev/null || true
     printf "\r\033[K" >&2
 
     cat "$tmp_out"
