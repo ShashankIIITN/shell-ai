@@ -49,7 +49,7 @@ else
     C_RESET=''
 fi
 
-# Helper: Run command with a visual spinner on stderr
+# Helper: Run command with a visual spinner until the first byte of output is received on stdin
 run_with_spinner() {
     # Skip spinner if not attached to a TTY or raw mode requested
     if [ ! -t 2 ] || [ "${SHELL_AI_RAW:-0}" = "1" ]; then
@@ -57,32 +57,37 @@ run_with_spinner() {
         return
     fi
 
-    local tmp_out tmp_err
-    tmp_out=$(mktemp)
-    tmp_err=$(mktemp)
-
-    "$@" > "$tmp_out" 2> "$tmp_err" &
-    local pid=$!
-
+    local char
     local spinner=( "⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏" )
     local i=0
-
-    # Hide cursor
+    
     tput civis >&2 2>/dev/null || true
-
-    while kill -0 $pid 2>/dev/null; do
+    
+    # We run the command and pipe its stdout directly to us. Stderr goes to terminal naturally.
+    "$@" | while true; do
+        IFS= read -r -t 0.1 -d "" -N 1 char
+        local ret=$?
+        
+        if [ -n "$char" ]; then
+            # We got our first byte!
+            tput cnorm >&2 2>/dev/null || true
+            printf "\r\033[K" >&2
+            
+            # Print the first byte and cat the rest of the stream unbuffered (or whatever cat uses)
+            printf "%s" "$char"
+            cat
+            return
+        elif [ $ret -le 128 ]; then
+            # EOF reached without any data
+            tput cnorm >&2 2>/dev/null || true
+            printf "\r\033[K" >&2
+            return
+        fi
+        
+        # Tick the spinner
         printf "\r\033[1;36m%s\033[0m \033[2mthinking...\033[0m" "${spinner[$i]}" >&2
         i=$(( (i + 1) % 10 ))
-        sleep 0.1
     done
-
-    # Restore cursor and clear line
-    tput cnorm >&2 2>/dev/null || true
-    printf "\r\033[K" >&2
-
-    cat "$tmp_out"
-    cat "$tmp_err" >&2
-    rm -f "$tmp_out" "$tmp_err"
 }
 
 # Helper: Built-in Zero-Dependency ANSI Markdown Renderer (using standard POSIX awk)
@@ -155,7 +160,7 @@ builtin_render_markdown() {
             txt = substr(line, RSTART + 2, RLENGTH - 4)
             line = substr(line, 1, RSTART - 1) BOLD txt RESET substr(line, RSTART + RLENGTH)
         }
-        print line
+        print line; fflush()
     }'
 }
 
@@ -277,11 +282,11 @@ Current Query: $raw_prompt"
     local tmp_out
     tmp_out=$(mktemp)
 
-    # Fetch output via spinner
-    run_with_spinner "$fn" "$history_prompt" > "$tmp_out"
-
-    # Render it immediately to stdout
-    cat "$tmp_out" | render_markdown
+    # Fetch output via spinner and stream it line-by-line to both renderer and tmp file
+    run_with_spinner "$fn" "$history_prompt" | while IFS= read -r line || [ -n "$line" ]; do
+        printf "%s\n" "$line" >> "$tmp_out"
+        printf "%s\n" "$line"
+    done | render_markdown
 
     # Save to history
     {
