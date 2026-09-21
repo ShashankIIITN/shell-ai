@@ -5,7 +5,7 @@
 set -e
 
 # Version
-SHELL_AI_VERSION="2.0.0"
+SHELL_AI_VERSION="2.1.0"
 
 # Find root directory
 SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"

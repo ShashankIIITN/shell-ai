@@ -10,11 +10,16 @@ backend_ollama_is_available() {
 backend_ollama_get_model() {
     if [ -n "$SHELL_AI_OLLAMA_MODEL" ]; then
         echo "$SHELL_AI_OLLAMA_MODEL"
-    elif ollama list 2>/dev/null | grep -q "qwen2.5-coder"; then
+        return
+    fi
+    # Cache the model list to avoid multiple ollama subprocess calls
+    local model_list
+    model_list=$(ollama list 2>/dev/null)
+    if echo "$model_list" | grep -q "qwen2.5-coder"; then
         echo "qwen2.5-coder"
-    elif ollama list 2>/dev/null | grep -q "llama3"; then
+    elif echo "$model_list" | grep -q "llama3"; then
         echo "llama3"
-    elif ollama list 2>/dev/null | grep -q "mistral"; then
+    elif echo "$model_list" | grep -q "mistral"; then
         echo "mistral"
     else
         echo "llama3"

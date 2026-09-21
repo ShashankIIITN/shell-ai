@@ -3,10 +3,8 @@
 # Compatible with: Oh-My-Zsh, Zinit, Antigen, Sheldon, and manual sourcing.
 # ==============================================================================
 
-# Ensure 0-indexed or 1-indexed safety and preserve standard zsh options
-0="${ZERO:-${${0:#$ZSH_ARGZERO}:-${(%):-%N}}}"
-0="${terminfo[sgr0]:+$0}"
-SHELL_AI_PLUGIN_DIR="${0:A:h}"
+# Resolve the plugin's own directory (compatible with OMZ, Zinit, manual source)
+SHELL_AI_PLUGIN_DIR="${${(%):-%N}:A:h}"
 
 # Add shell-ai bin directory to PATH if not already present
 if [[ ":$PATH:" != *":${SHELL_AI_PLUGIN_DIR}/bin:"* ]]; then
@@ -131,8 +129,15 @@ ai() {
     fi
 }
 
+# Capture last exit status before precmd/prompt overhead resets it
+_shell_ai_capture_status() { _SHELL_AI_LAST_STATUS=$? }
+if (( ! ${precmd_functions[(I)_shell_ai_capture_status]} )); then
+    precmd_functions=(_shell_ai_capture_status $precmd_functions)
+fi
+
 fix-last() {
-    local last_status="$?"
-    local last_cmd="$(fc -ln -1 2>/dev/null | sed -e 's/^[[:space:]]*//')"
+    local last_status="${_SHELL_AI_LAST_STATUS:-$?}"
+    local last_cmd
+    last_cmd="$(fc -ln -1 2>/dev/null | sed -e 's/^[[:space:]]*//')"
     shell-ai fix "$last_status" "$last_cmd"
 }

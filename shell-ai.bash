@@ -17,6 +17,14 @@ if [[ -f "$USER_CONFIG_DIR/config" ]]; then
     source "$USER_CONFIG_DIR/config"
 fi
 
+# Capture last exit status at every prompt (must be first in PROMPT_COMMAND)
+_shell_ai_capture_status() { _SHELL_AI_LAST_STATUS=$?; }
+if [[ -z "$PROMPT_COMMAND" ]]; then
+    PROMPT_COMMAND="_shell_ai_capture_status"
+elif [[ "$PROMPT_COMMAND" != *"_shell_ai_capture_status"* ]]; then
+    PROMPT_COMMAND="_shell_ai_capture_status;${PROMPT_COMMAND}"
+fi
+
 # Prompt-to-Command Keybinding (Ctrl+G in Bash Readline)
 _shell_ai_bash_suggest_cmd() {
     [[ -z "$READLINE_LINE" ]] && return
@@ -41,8 +49,9 @@ ai() {
 }
 
 fix-last() {
-    local last_status="$?"
+    # Use the status captured by PROMPT_COMMAND before any function overhead
+    local last_status="${_SHELL_AI_LAST_STATUS:-$?}"
     local last_cmd
-    last_cmd="$(HISTTIMEFORMAT= history 1 | sed -e 's/^[ ]*[0-9]*[ ]*//')"
+    last_cmd="$(HISTTIMEFORMAT='' history 1 | sed -e 's/^[ ]*[0-9]*[ ]*//')"
     shell-ai fix "$last_status" "$last_cmd"
 }
