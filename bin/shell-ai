@@ -23,8 +23,16 @@ if [ -f "$USER_CONFIG_DIR/config" ]; then
     source "$USER_CONFIG_DIR/config"
 fi
 
-# Temporary storage for context memory
-HISTORY_FILE="${TMPDIR:-/tmp}/shell-ai-history.txt"
+# Context memory storage — configurable via SHELL_AI_HISTORY_MODE
+# Options: "persistent" (default, survives reboots) | "tmp" (cleared on reboot)
+: "${SHELL_AI_HISTORY_MODE:=persistent}"
+if [ "$SHELL_AI_HISTORY_MODE" = "persistent" ]; then
+    _SHELL_AI_STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/shell-ai"
+    mkdir -p "$_SHELL_AI_STATE_DIR" 2>/dev/null || _SHELL_AI_STATE_DIR="${TMPDIR:-/tmp}"
+    HISTORY_FILE="${_SHELL_AI_STATE_DIR}/history.txt"
+else
+    HISTORY_FILE="${TMPDIR:-/tmp}/shell-ai-history.txt"
+fi
 
 # Load backend adapters
 for b in "$SHELL_AI_ROOT"/backends/*.sh; do
@@ -60,20 +68,27 @@ run_with_spinner() {
     local char
     local spinner=( "⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏" )
     local i=0
-    
+
+    # Use a tmp file to smuggle the backend exit code out of the subshell
+    local status_file
+    status_file=$(mktemp)
+
     tput civis >&2 2>/dev/null || true
-    
-    # We run the command and pipe its stdout directly to us. Stderr goes to terminal naturally.
-    "$@" | while true; do
+
+    # Run backend in background, capture its exit code
+    {
+        "$@"
+        echo $? > "$status_file"
+    } | while true; do
         local ret=0
         IFS= read -r -t 0.1 -d "" -N1 char || ret=$?
-        
+
         if [ -n "$char" ]; then
             # We got our first byte!
             tput cnorm >&2 2>/dev/null || true
             printf "\r\033[K" >&2
-            
-            # Print the first byte and cat the rest of the stream unbuffered (or whatever cat uses)
+
+            # Print the first byte and cat the rest of the stream unbuffered
             printf "%s" "$char"
             cat
             return
@@ -83,12 +98,19 @@ run_with_spinner() {
             printf "\r\033[K" >&2
             return
         fi
-        
+
         # Tick the spinner
         printf "\r\033[1;36m%s\033[0m \033[2mthinking...\033[0m" "${spinner[$i]}" >&2
         i=$(( (i + 1) % 10 ))
     done
+
+    # Propagate the backend's exit code
+    local backend_status=0
+    [ -f "$status_file" ] && backend_status=$(cat "$status_file")
+    rm -f "$status_file"
+    return "$backend_status"
 }
+
 
 # Helper: Built-in Zero-Dependency ANSI Markdown Renderer (using standard POSIX awk)
 builtin_render_markdown() {
@@ -100,6 +122,10 @@ builtin_render_markdown() {
     }
     {
         line = $0
+        # Strip stray ANSI cursor-movement / control sequences (e.g. \033[D, \033[C, \033[K, \033[nA)
+        # that some backends leak into their output. Preserve color codes (\033[...m).
+        gsub(/\033\[[0-9]*[A-LN-Z]/, "", line)
+        gsub(/\033\[[0-9;]*[a-ln-z]/, "", line)
         # Code block toggle (supports indented code blocks)
         if (line ~ /^[[:space:]]*```/) {
             if (in_code == 0) {
@@ -175,6 +201,9 @@ render_markdown() {
     if [ "${SHELL_AI_RENDERER}" = "builtin" ]; then
         builtin_render_markdown
         return
+    elif [ "${SHELL_AI_RENDERER}" = "glow" ] && command -v glow >/dev/null 2>&1; then
+        glow -
+        return
     elif [ "${SHELL_AI_RENDERER}" = "bat" ] && command -v bat >/dev/null 2>&1; then
         bat -l markdown --style=plain --paging=never --color=always
         return
@@ -219,6 +248,8 @@ ${C_BOLD}ACTIONS:${C_RESET}
     ${C_GREEN}cmd${C_RESET} <query>               Generate a raw shell command (no markdown)
     ${C_GREEN}fix${C_RESET} [exit_code] [cmd]     Diagnose a failed command and suggest a fix
     ${C_GREEN}interactive${C_RESET} [backend]     Launch the full interactive agent session
+    ${C_GREEN}history${C_RESET} [show|clear|path] View, clear, or locate conversation memory
+    ${C_GREEN}clear${C_RESET}                     Clear conversation memory (alias for history clear)
     ${C_GREEN}list-backends${C_RESET}           Show available backends and system status
 
 ${C_BOLD}OPTIONS:${C_RESET}
@@ -270,6 +301,16 @@ done
 
 ACTIVE_BACKEND="${BACKEND_OVERRIDE:-$(get_default_backend)}"
 
+# Validate backend name
+case "$ACTIVE_BACKEND" in
+    agy|claude|ollama|copilot|custom) ;;
+    *)
+        echo -e "${C_YELLOW}Warning:${C_RESET} Unknown backend '${ACTIVE_BACKEND}'. Valid options: agy, claude, ollama, copilot, custom." >&2
+        echo "Falling back to auto-detection..." >&2
+        ACTIVE_BACKEND="$(SHELL_AI_DEFAULT_BACKEND='' get_default_backend)"
+        ;;
+esac
+
 # Helper: Handle memory context for ask queries
 handle_ask_with_memory() {
     local fn="$1"
@@ -286,13 +327,17 @@ Current Query: $raw_prompt"
 
     local tmp_out
     tmp_out=$(mktemp)
+    # Ensure temp file is cleaned up on interrupt or early exit
+    trap 'rm -f "$tmp_out"' EXIT INT TERM
 
     # Fetch output via spinner and stream it
     if command -v python3 >/dev/null 2>&1 && [ -f "$SHELL_AI_ROOT/bin/smooth_render.py" ]; then
         run_with_spinner "$fn" "$history_prompt" | stdbuf -o0 tee "$tmp_out" | python3 "$SHELL_AI_ROOT/bin/smooth_render.py"
         echo ""
-    elif command -v stdbuf >/dev/null 2>&1 && command -v fold >/dev/null 2>&1; then
-        run_with_spinner "$fn" "$history_prompt" | stdbuf -o0 fold -w "${COLUMNS:-90}" -s | stdbuf -o0 tee "$tmp_out" | render_markdown
+    elif command -v stdbuf >/dev/null 2>&1; then
+        # Note: fold removed — it is byte-unaware and breaks mid-ANSI-escape-code.
+        # Let the terminal handle line wrapping natively.
+        run_with_spinner "$fn" "$history_prompt" | stdbuf -o0 tee "$tmp_out" | render_markdown
     else
         run_with_spinner "$fn" "$history_prompt" | while IFS= read -r line || [ -n "$line" ]; do
             printf "%s\n" "$line" >> "$tmp_out"
@@ -314,6 +359,7 @@ Current Query: $raw_prompt"
     fi
 
     rm -f "$tmp_out"
+    trap - EXIT INT TERM
 }
 
 # Route actions
@@ -322,7 +368,35 @@ ACTION="$1"
 case "$ACTION" in
     clear)
         rm -f "$HISTORY_FILE"
-        echo -e "${C_GREEN}✔${C_RESET} shell-ai temporary memory cleared."
+        echo -e "${C_GREEN}✔${C_RESET} shell-ai conversation memory cleared."
+        # shellcheck disable=SC2317
+            return 0 2>/dev/null || exit 0
+        ;;
+
+    history)
+        shift
+        case "${1:-show}" in
+            show)
+                if [ -f "$HISTORY_FILE" ] && [ -s "$HISTORY_FILE" ]; then
+                    echo -e "${C_BOLD}Conversation Memory:${C_RESET} ($HISTORY_FILE)"
+                    echo ""
+                    render_markdown < "$HISTORY_FILE"
+                else
+                    echo -e "${C_DIM}No conversation history yet.${C_RESET}"
+                fi
+                ;;
+            clear)
+                rm -f "$HISTORY_FILE"
+                echo -e "${C_GREEN}✔${C_RESET} shell-ai conversation memory cleared."
+                ;;
+            path)
+                echo "$HISTORY_FILE"
+                ;;
+            *)
+                echo "Usage: shell-ai history [show|clear|path]" >&2
+                exit 1
+                ;;
+        esac
         # shellcheck disable=SC2317
             return 0 2>/dev/null || exit 0
         ;;
@@ -331,7 +405,6 @@ case "$ACTION" in
         echo -e "${C_BOLD}Available Backends:${C_RESET}"
         default_b=$(get_default_backend)
         for b in agy claude ollama copilot custom; do
-            is_avail="no"
             if "backend_${b}_is_available" 2>/dev/null; then
                 is_avail="${C_GREEN}installed${C_RESET}"
             else
