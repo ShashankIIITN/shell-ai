@@ -353,7 +353,15 @@ case "$ACTION" in
                 # Interactive CLI mode
                 RAW_CMD=$(run_with_spinner "$fn" "$PROMPT")
                 echo -e "\nProposed Command:\n${C_GREEN}${C_BOLD}${RAW_CMD}${C_RESET}\n"
+                
+                # Save and restore TTY state so read works inside ZLE raw mode
+                old_stty=$(stty -g 2>/dev/null || true)
+                stty sane 2>/dev/null || true
+                
                 read -r -p "Action: [e]xecute, [c]opy, [a]bort: " action </dev/tty
+                
+                stty "$old_stty" 2>/dev/null || true
+                
                 case "$action" in
                     [eE]*) eval "$RAW_CMD" ;;
                     [cC]*) 

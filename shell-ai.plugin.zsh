@@ -58,34 +58,29 @@ _shell_ai_accept_line() {
     if [[ "$trimmed" == "${SHELL_AI_PREFIX}ai fix"* ]] || [[ "$trimmed" == "${SHELL_AI_PREFIX}fix"* ]]; then
         local last_status="$?"
         local last_cmd="$(fc -ln -1 2>/dev/null | sed -e 's/^[[:space:]]*//')"
-        print ""
-        print -P "%F{yellow}🔍 shell-ai: diagnosing failed command:%f $last_cmd"
-        shell-ai fix "$last_status" "$last_cmd"
-        BUFFER=""
-        zle redisplay
+        print -s "$BUFFER" # Save to history
+        BUFFER=" shell-ai fix \"$last_status\" ${(q)last_cmd}"
+        zle .accept-line
         return
     fi
 
-    # Check for Provider-Specific Prefix: %agy, %claude, %ollama, %copilot
+    # Check for Provider-Specific Prefix: %agy, %claude, %ollama, %copilot, %custom
     for backend in agy claude ollama copilot custom; do
         if [[ "$trimmed" == "${SHELL_AI_PREFIX}${backend}" ]] || [[ "$trimmed" == "${SHELL_AI_PREFIX}${backend} "* ]]; then
             local query="${trimmed#"${SHELL_AI_PREFIX}${backend}"}"
             query="${query#"${query%%[![:space:]]*}"}" # strip leading space
 
+            print -s "$BUFFER"
             if [[ -z "$query" ]]; then
-                # Interactive mode
-                BUFFER=""
-                zle redisplay
-                shell-ai interactive "$backend"
+                BUFFER=" shell-ai interactive \"$backend\""
             else
                 local -a args
                 args=("${(@Q)${(z)query}}")
-
-                print ""
-                shell-ai -b "$backend" "${args[@]}"
-                BUFFER=""
-                zle redisplay
+                local -a qargs
+                for a in "${args[@]}"; do qargs+=("${(q)a}"); done
+                BUFFER=" BACKEND_OVERRIDE=\"$backend\" shell-ai ${qargs[@]}"
             fi
+            zle .accept-line
             return
         fi
     done
@@ -100,20 +95,17 @@ _shell_ai_accept_line() {
         fi
         query="${query#"${query%%[![:space:]]*}"}"
 
+        print -s "$BUFFER"
         if [[ -z "$query" ]]; then
-            BUFFER=""
-            zle redisplay
-            shell-ai interactive
+            BUFFER=" shell-ai interactive"
         else
-            # Parse the query into arguments, handling quotes properly
             local -a args
             args=("${(@Q)${(z)query}}")
-
-            print ""
-            shell-ai "${args[@]}"
-            BUFFER=""
-            zle redisplay
+            local -a qargs
+            for a in "${args[@]}"; do qargs+=("${(q)a}"); done
+            BUFFER=" shell-ai ${qargs[@]}"
         fi
+        zle .accept-line
         return
     fi
 
