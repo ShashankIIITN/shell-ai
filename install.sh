@@ -101,16 +101,73 @@ if [ "$CURRENT_SHELL" = "fish" ] || [ -d "$HOME/.config/fish" ]; then
     fi
 fi
 
+# 5. Interactive Configuration Setup
+if [ -t 0 ] && [ -f "$CONFIG_DIR/config" ]; then
+    echo ""
+    echo -e "${YELLOW}${BOLD}==> Interactive Setup${RESET}"
+    read -p "Would you like to configure shell-ai now? [Y/n]: " do_setup
+    if [[ ! "$do_setup" =~ ^[Nn] ]]; then
+        # Default backend
+        echo ""
+        echo -e "Select your default AI backend:"
+        echo -e "  1) ollama  (Local, free)"
+        echo -e "  2) agy     (Google Antigravity)"
+        echo -e "  3) claude  (Anthropic)"
+        echo -e "  4) copilot (GitHub CLI)"
+        read -p "Choice [1]: " b_choice
+        case "$b_choice" in
+            2) sel_backend="agy" ;;
+            3) sel_backend="claude" ;;
+            4) sel_backend="copilot" ;;
+            *) sel_backend="ollama" ;;
+        esac
+        sed -i "s/^export SHELL_AI_DEFAULT_BACKEND=.*/export SHELL_AI_DEFAULT_BACKEND=\"$sel_backend\"/" "$CONFIG_DIR/config"
+        
+        # If ollama, prompt for model
+        if [ "$sel_backend" = "ollama" ]; then
+            read -p "Ollama model [qwen3-4b:latest]: " o_model
+            o_model="${o_model:-qwen3-4b:latest}"
+            sed -i "s/^export SHELL_AI_OLLAMA_MODEL=.*/export SHELL_AI_OLLAMA_MODEL=\"$o_model\"/" "$CONFIG_DIR/config"
+        fi
+
+        # Prefix
+        echo ""
+        echo -e "Select your preferred terminal prefix trigger:"
+        echo -e "  1) @   (Recommended, e.g. @ai, @ollama)"
+        echo -e "  2) ,   (e.g. ,ai, ,ollama)"
+        echo -e "  3) %   (e.g. %ai - Note: clunky in non-interactive scripts)"
+        echo -e "  4) ??  (e.g. ?? write a story)"
+        read -p "Choice [1]: " p_choice
+        case "$p_choice" in
+            2) sel_prefix="," ;;
+            3) sel_prefix="%" ;;
+            4) sel_prefix="??" ;;
+            *) sel_prefix="@" ;;
+        esac
+        sed -i "s/^export SHELL_AI_PREFIX=.*/export SHELL_AI_PREFIX=\"$sel_prefix\"/" "$CONFIG_DIR/config"
+
+        echo -e "${GREEN}✔${RESET} Configuration saved to ${BOLD}$CONFIG_DIR/config${RESET}"
+    fi
+fi
+
+# Determine display prefix for quick usage instructions
+disp_prefix="$(grep '^export SHELL_AI_PREFIX=' "$CONFIG_DIR/config" | cut -d'"' -f2 || echo "@")"
+if [ "$disp_prefix" = "??" ]; then
+    disp_prefix="??"
+fi
+
 echo ""
 echo -e "${GREEN}${BOLD}🚀 shell-ai installation complete!${RESET}"
 echo ""
 echo -e "${BOLD}Quick Usage:${RESET}"
-echo -e "  • ${BOLD}%ai <prompt>${RESET}      - Ask any question right in your terminal"
-echo -e "  • ${BOLD}%agy <prompt>${RESET}     - Ask Google Antigravity CLI"
-echo -e "  • ${BOLD}%claude <prompt>${RESET}  - Ask Anthropic Claude Code"
-echo -e "  • ${BOLD}%ollama <prompt>${RESET}  - Ask local offline Ollama models"
+echo -e "  • ${BOLD}${disp_prefix}ai <prompt>${RESET}      - Ask any question right in your terminal"
+if [ "$disp_prefix" != "??" ]; then
+    echo -e "  • ${BOLD}${disp_prefix}agy <prompt>${RESET}     - Ask Google Antigravity CLI"
+    echo -e "  • ${BOLD}${disp_prefix}claude <prompt>${RESET}  - Ask Anthropic Claude Code"
+    echo -e "  • ${BOLD}${disp_prefix}ollama <prompt>${RESET}  - Ask local offline Ollama models"
+fi
 echo -e "  • ${BOLD}Ctrl + G${RESET}          - Type a question in your prompt and press Ctrl+G to get the command!"
-echo -e "  • ${BOLD}%ai fix${RESET}           - Explain and fix the last failed command"
+echo -e "  • ${BOLD}${disp_prefix}ai fix${RESET}           - Explain and fix the last failed command"
 echo ""
 echo -e "To activate now, restart your terminal or run:"
 echo -e "  ${BOLD}source ~/.zshrc${RESET}  (or source ~/.bashrc)"
