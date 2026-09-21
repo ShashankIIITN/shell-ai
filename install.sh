@@ -53,7 +53,7 @@ CURRENT_SHELL="$(basename "${SHELL:-zsh}")"
 
 # Check for Oh-My-Zsh
 OMZ_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
-if [ -d "$OMZ_CUSTOM/plugins" ]; then
+if [ -d "${ZSH_CUSTOM:-$HOME/.oh-my-zsh}" ] || [ -d "$HOME/.oh-my-zsh" ]; then
     mkdir -p "$OMZ_CUSTOM/plugins"
     ln -sfn "$SOURCE_DIR" "$OMZ_CUSTOM/plugins/shell-ai"
     echo -e "${GREEN}✔${RESET} Registered as Oh-My-Zsh plugin: ${BOLD}shell-ai${RESET}"

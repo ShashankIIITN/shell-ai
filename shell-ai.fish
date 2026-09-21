@@ -8,7 +8,7 @@ if not contains "$SHELL_AI_DIR/bin" $PATH
     set -gx PATH "$SHELL_AI_DIR/bin" $PATH
 end
 
-# Load user config (naive parsing of bash-style exports)
+# Load user config (robust parsing of bash-style exports)
 set -l USER_CONFIG_DIR "$HOME/.config/shell-ai"
 if set -q XDG_CONFIG_HOME
     set USER_CONFIG_DIR "$XDG_CONFIG_HOME/shell-ai"
@@ -16,22 +16,28 @@ end
 
 if test -f "$USER_CONFIG_DIR/config"
     while read -l line
-        if string match -q "export *" -- "$line"
-            set -l kv (string replace "export " "" -- "$line")
-            set -l arr (string split -m 1 "=" -- "$kv")
-            if test (count $arr) -ge 2
-                set -l k $arr[1]
-                set -l v (string trim -c '"\'' -- $arr[2])
-                set -gx $k $v
-            end
-        else if string match -q "SHELL_AI_*" -- "$line"
-            set -l arr (string split -m 1 "=" -- "$line")
-            if test (count $arr) -ge 2
-                set -l k $arr[1]
-                set -l v (string trim -c '"\'' -- $arr[2])
-                set -gx $k $v
-            end
-        end
+        # Skip blank lines and comments
+        set line (string trim -- "$line")
+        test -z "$line"; and continue
+        string match -q '#*' -- "$line"; and continue
+
+        # Strip 'export ' prefix if present
+        set line (string replace -r '^export\\s+' '' -- "$line")
+
+        # Only process SHELL_AI_ variables for safety
+        string match -q 'SHELL_AI_*' -- "$line"; or continue
+
+        # Split on first '=' only (handles values containing '=')
+        set -l arr (string split -m 1 '=' -- "$line")
+        test (count $arr) -ge 2; or continue
+
+        set -l k $arr[1]
+        # Strip inline comments: remove unquoted # and everything after
+        set -l v (string replace -r '\\s+#.*$' '' -- $arr[2])
+        # Strip surrounding quotes (single or double)
+        set v (string replace -r '^["\'](.*)["\']\$' '$1' -- "$v")
+
+        set -gx $k $v
     end < "$USER_CONFIG_DIR/config"
 end
 

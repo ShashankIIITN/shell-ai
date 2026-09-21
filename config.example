@@ -24,6 +24,11 @@ export SHELL_AI_NO_COLOR="0"
 # Disable context storing / conversational memory (0 = enabled, 1 = disabled)
 export SHELL_AI_NO_CONTEXT="0"
 
+# History storage mode: persistent | tmp
+# "persistent" stores in ~/.local/state/shell-ai/ (survives reboots)
+# "tmp" stores in /tmp/ (cleared on reboot — old default behavior)
+export SHELL_AI_HISTORY_MODE="persistent"
+
 # Markdown renderer: auto | builtin | glow | bat | none
 # "builtin" requires ZERO extra dependencies (pure POSIX awk)
 export SHELL_AI_RENDERER="auto"
