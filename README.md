@@ -22,6 +22,17 @@ Unlike single-vendor tools, `shell-ai` is **engine-agnostic**. It seamlessly ada
 
 ---
 
+## 🤔 Why use `shell-ai` instead of raw CLIs?
+
+While you *can* just type `claude "question"` or `agy "question"`, `shell-ai` is designed to completely eliminate workflow friction:
+
+1. **No Quotes or Escaping:** Stop fighting bash syntax. Instead of `claude "how do I find files?"`, just type naturally: `%ai how do I find files?`
+2. **Zero Copy-Pasting (<kbd>Ctrl</kbd>+<kbd>G</kbd>):** Instead of asking the AI for a command, copying it, and pasting it back, just type your goal and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. Your prompt instantly transforms into the executable command.
+3. **Auto-Context Error Fixing:** Command failed? Just type `%ai fix`. The plugin automatically pulls the exact failed command and exit code from your shell history and diagnoses it.
+4. **Clean Terminal Markdown:** Automatically strips markdown tags and renders beautiful, boxed terminal text natively with zero extra dependencies using our POSIX `awk` renderer.
+
+---
+
 ## ✨ Features
 
 ### 1. Inline Quick Ask (`%ai`, `%agy`, `%claude`, `%ollama`)
