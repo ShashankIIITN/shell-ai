@@ -523,19 +523,29 @@ case "$ACTION" in
         ;;
 
     fix)
+        PIPE_CTX=""
+        if [ ! -t 0 ]; then
+            PIPE_CTX="$(cat)"
+        fi
+        
         if [ $# -ge 2 ] && [[ "$2" =~ ^[0-9]+$ ]]; then
             shift
             EXIT_CODE="${1:-1}"
             LAST_CMD="$2"
             CONTEXT="$3"
+            
+            if [ -n "$PIPE_CTX" ]; then
+                if [ -n "$CONTEXT" ]; then
+                    CONTEXT="${CONTEXT}\n\nPiped Output:\n${PIPE_CTX}"
+                else
+                    CONTEXT="Piped Output:\n${PIPE_CTX}"
+                fi
+            fi
+            
             fn="backend_${ACTIVE_BACKEND}_fix"
             if type "$fn" >/dev/null 2>&1; then
                 run_with_spinner "$fn" "$LAST_CMD" "$EXIT_CODE" "$CONTEXT" | render_markdown
             else
-                echo "Error: Backend '$ACTIVE_BACKEND' does not support fix." >&2
-                exit 1
-            fi
-        else
             PROMPT="$*"
             fn="backend_${ACTIVE_BACKEND}_ask"
             if type "$fn" >/dev/null 2>&1; then
