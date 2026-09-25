@@ -54,13 +54,21 @@ _shell_ai_accept_line() {
 
     # Check for Error Fix trigger: '%ai fix' or '%fix'
     if [[ "$trimmed" == "${SHELL_AI_PREFIX}ai fix"* ]] || [[ "$trimmed" == "${SHELL_AI_PREFIX}fix"* ]]; then
-        local last_status="$?"
-        local last_cmd="$(fc -ln -1 2>/dev/null | sed -e 's/^[[:space:]]*//')"
+        local query=""
+        if [[ "$trimmed" == "${SHELL_AI_PREFIX}ai fix"* ]]; then
+            query="${trimmed#"${SHELL_AI_PREFIX}ai fix"}"
+        else
+            query="${trimmed#"${SHELL_AI_PREFIX}fix"}"
+        fi
+        query="${query#"${query%%[![:space:]]*}"}" # strip leading space
+
+        local last_status="${_SHELL_AI_LAST_STATUS:-$?}"
+        local last_cmd="$(fc -ln -2 2>/dev/null | sed -e 's/^[[:space:]]*//' | grep -vE '^(fix-last|shell-ai fix|%ai fix|@ai fix|,\?ai fix)' | tail -n 1)"
         print -s "$BUFFER" # Save to history
         zle -I
         print ""
         print -P "%F{yellow}🔍 shell-ai: diagnosing failed command:%f $last_cmd"
-        shell-ai fix "$last_status" "$last_cmd"
+        shell-ai fix "$last_status" "$last_cmd" "$query"
         BUFFER=""
         zle redisplay
         return
