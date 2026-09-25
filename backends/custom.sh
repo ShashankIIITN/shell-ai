@@ -49,7 +49,9 @@ backend_custom_cmd() {
 backend_custom_fix() {
     local last_cmd="$1"
     local exit_code="${2:-1}"
-    backend_custom_ask "Command '$last_cmd' failed with exit code $exit_code. Suggest a fix."
+    local status_msg="failed with exit code $exit_code"
+    [ "$exit_code" = "0" ] && status_msg="returned exit code 0 but produced an error"
+    backend_custom_ask "Command '$last_cmd' $status_msg. Suggest a fix."
 }
 
 backend_custom_interactive() {

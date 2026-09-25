@@ -39,7 +39,10 @@ backend_agy_fix() {
     local exit_code="${2:-1}"
     local context="$3"
     
-    local prompt="The following shell command failed with exit code ${exit_code}:
+    local status_msg="failed with exit code ${exit_code}"
+    [ "$exit_code" = "0" ] && status_msg="returned exit code 0 but produced an error or unexpected output"
+    local prompt="The following shell command ${status_msg}:
+
 \`\`\`bash
 ${last_cmd}
 \`\`\`"
