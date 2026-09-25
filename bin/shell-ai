@@ -498,22 +498,28 @@ case "$ACTION" in
                 stty sane 2>/dev/null || true
                 
                 if [ -r /dev/tty ]; then
-                    read -r -p "Action: [e]xecute, [c]opy, [a]bort: " action </dev/tty
+                    read -r -n 1 -p "Action: [e]xecute, [c]opy, [a]bort: " action </dev/tty
+                    echo ""
                 else
                     action="a"
                 fi
                 
-                stty "$old_stty" 2>/dev/null || true
-                
                 case "$action" in
-                    [eE]*) eval "$RAW_CMD" ;;
+                    [eE]*) 
+                        eval "$RAW_CMD"
+                        stty "$old_stty" 2>/dev/null || true
+                        ;;
                     [cC]*) 
+                        stty "$old_stty" 2>/dev/null || true
                         if command -v pbcopy >/dev/null 2>&1; then echo "$RAW_CMD" | pbcopy
                         elif command -v xclip >/dev/null 2>&1; then echo "$RAW_CMD" | xclip -sel clip
                         elif command -v wl-copy >/dev/null 2>&1; then echo "$RAW_CMD" | wl-copy
                         else echo "No clipboard tool found (pbcopy/xclip/wl-copy)."; fi
                         ;;
-                    *) echo "Aborted." ;;
+                    *) 
+                        stty "$old_stty" 2>/dev/null || true
+                        echo "Aborted." 
+                        ;;
                 esac
             fi
         else
