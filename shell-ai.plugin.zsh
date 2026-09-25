@@ -131,13 +131,14 @@ ai() {
 
 # Capture last exit status before precmd/prompt overhead resets it
 _shell_ai_capture_status() { _SHELL_AI_LAST_STATUS=$? }
-if (( ! ${precmd_functions[(I)_shell_ai_capture_status]} )); then
-    precmd_functions=(_shell_ai_capture_status $precmd_functions)
+typeset -ga precmd_functions
+if [[ -z "${precmd_functions[(r)_shell_ai_capture_status]}" ]]; then
+    precmd_functions+=(_shell_ai_capture_status)
 fi
 
 fix-last() {
     local last_status="${_SHELL_AI_LAST_STATUS:-$?}"
     local last_cmd
-    last_cmd="$(fc -ln -1 2>/dev/null | sed -e 's/^[[:space:]]*//')"
+    last_cmd="$(fc -ln -2 2>/dev/null | sed -e 's/^[[:space:]]*//' | grep -vE '^(fix-last|shell-ai fix|%ai fix|@ai fix|,\?ai fix)' | tail -n 1)"
     shell-ai fix "$last_status" "$last_cmd"
 }

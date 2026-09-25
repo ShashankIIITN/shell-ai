@@ -367,66 +367,112 @@ ACTION="$1"
 
 case "$ACTION" in
     clear)
-        rm -f "$HISTORY_FILE"
-        echo -e "${C_GREEN}✔${C_RESET} shell-ai conversation memory cleared."
-        # shellcheck disable=SC2317
+        if [ $# -gt 1 ]; then
+            PROMPT="$*"
+            fn="backend_${ACTIVE_BACKEND}_ask"
+            if type "$fn" >/dev/null 2>&1; then
+                handle_ask_with_memory "$fn" "$PROMPT"
+            else
+                echo "Error: Unknown backend '$ACTIVE_BACKEND'" >&2
+                exit 1
+            fi
+        else
+            rm -f "$HISTORY_FILE"
+            echo -e "${C_GREEN}✔${C_RESET} shell-ai conversation memory cleared."
+            # shellcheck disable=SC2317
             return 0 2>/dev/null || exit 0
+        fi
         ;;
 
     history)
-        shift
-        case "${1:-show}" in
-            show)
-                if [ -f "$HISTORY_FILE" ] && [ -s "$HISTORY_FILE" ]; then
-                    echo -e "${C_BOLD}Conversation Memory:${C_RESET} ($HISTORY_FILE)"
-                    echo ""
-                    render_markdown < "$HISTORY_FILE"
-                else
-                    echo -e "${C_DIM}No conversation history yet.${C_RESET}"
-                fi
-                ;;
-            clear)
-                rm -f "$HISTORY_FILE"
-                echo -e "${C_GREEN}✔${C_RESET} shell-ai conversation memory cleared."
-                ;;
-            path)
-                echo "$HISTORY_FILE"
-                ;;
-            *)
-                echo "Usage: shell-ai history [show|clear|path]" >&2
+        if [ $# -gt 1 ] && [ "$2" != "show" ] && [ "$2" != "clear" ] && [ "$2" != "path" ]; then
+            PROMPT="$*"
+            fn="backend_${ACTIVE_BACKEND}_ask"
+            if type "$fn" >/dev/null 2>&1; then
+                handle_ask_with_memory "$fn" "$PROMPT"
+            else
+                echo "Error: Unknown backend '$ACTIVE_BACKEND'" >&2
                 exit 1
-                ;;
-        esac
-        # shellcheck disable=SC2317
+            fi
+        else
+            shift
+            case "${1:-show}" in
+                show)
+                    if [ -f "$HISTORY_FILE" ] && [ -s "$HISTORY_FILE" ]; then
+                        echo -e "${C_BOLD}Conversation Memory:${C_RESET} ($HISTORY_FILE)"
+                        echo ""
+                        render_markdown < "$HISTORY_FILE"
+                    else
+                        echo -e "${C_DIM}No conversation history yet.${C_RESET}"
+                    fi
+                    ;;
+                clear)
+                    rm -f "$HISTORY_FILE"
+                    echo -e "${C_GREEN}✔${C_RESET} shell-ai conversation memory cleared."
+                    ;;
+                path)
+                    echo "$HISTORY_FILE"
+                    ;;
+                *)
+                    echo "Usage: shell-ai history [show|clear|path]" >&2
+                    exit 1
+                    ;;
+            esac
+            # shellcheck disable=SC2317
             return 0 2>/dev/null || exit 0
+        fi
         ;;
 
     list-backends)
-        echo -e "${C_BOLD}Available Backends:${C_RESET}"
-        default_b=$(get_default_backend)
-        for b in agy claude ollama copilot custom; do
-            if "backend_${b}_is_available" 2>/dev/null; then
-                is_avail="${C_GREEN}installed${C_RESET}"
+        if [ $# -gt 1 ]; then
+            PROMPT="$*"
+            fn="backend_${ACTIVE_BACKEND}_ask"
+            if type "$fn" >/dev/null 2>&1; then
+                handle_ask_with_memory "$fn" "$PROMPT"
             else
-                is_avail="${C_DIM}not found${C_RESET}"
+                echo "Error: Unknown backend '$ACTIVE_BACKEND'" >&2
+                exit 1
             fi
-            
-            is_def=""
-            if [ "$b" = "$default_b" ]; then
-                is_def="${C_YELLOW}(default)${C_RESET}"
-            fi
-            printf "  %-10s : %-20b %b\n" "$b" "$is_avail" "$is_def"
-        done
+        else
+            echo -e "${C_BOLD}Available Backends:${C_RESET}"
+            default_b=$(get_default_backend)
+            for b in agy claude ollama copilot custom; do
+                is_avail="no"
+                if "backend_${b}_is_available" 2>/dev/null; then
+                    is_avail="${C_GREEN}installed${C_RESET}"
+                else
+                    is_avail="${C_DIM}not found${C_RESET}"
+                fi
+                
+                is_def=""
+                if [ "$b" = "$default_b" ]; then
+                    is_def="${C_YELLOW}(default)${C_RESET}"
+                fi
+                printf "  %-10s : %-20b %b\n" "$b" "$is_avail" "$is_def"
+            done
+        fi
         ;;
 
     interactive)
-        shift
-        target_b="${1:-$ACTIVE_BACKEND}"
-        if type "backend_${target_b}_interactive" >/dev/null 2>&1; then
-            "backend_${target_b}_interactive"
+        target_b="${2:-$ACTIVE_BACKEND}"
+        if [ $# -gt 2 ] || { [ $# -eq 2 ] && ! type "backend_${target_b}_interactive" >/dev/null 2>&1; }; then
+            # Looks like a natural query
+            PROMPT="$*"
+            fn="backend_${ACTIVE_BACKEND}_ask"
+            if type "$fn" >/dev/null 2>&1; then
+                handle_ask_with_memory "$fn" "$PROMPT"
+            else
+                echo "Error: Unknown backend '$ACTIVE_BACKEND'" >&2
+                exit 1
+            fi
         else
-            echo "Error: Unknown backend '$target_b'" >&2
-            exit 1
+            shift
+            if type "backend_${target_b}_interactive" >/dev/null 2>&1; then
+                "backend_${target_b}_interactive"
+            else
+                echo "Error: Unknown backend '$target_b'" >&2
+                exit 1
+            fi
         fi
         ;;
 
@@ -451,7 +497,11 @@ case "$ACTION" in
                 old_stty=$(stty -g 2>/dev/null || true)
                 stty sane 2>/dev/null || true
                 
-                read -r -p "Action: [e]xecute, [c]opy, [a]bort: " action </dev/tty
+                if [ -r /dev/tty ]; then
+                    read -r -p "Action: [e]xecute, [c]opy, [a]bort: " action </dev/tty
+                else
+                    action="a"
+                fi
                 
                 stty "$old_stty" 2>/dev/null || true
                 
@@ -473,16 +523,27 @@ case "$ACTION" in
         ;;
 
     fix)
-        shift
-        EXIT_CODE="${1:-1}"
-        LAST_CMD="$2"
-        CONTEXT="$3"
-        fn="backend_${ACTIVE_BACKEND}_fix"
-        if type "$fn" >/dev/null 2>&1; then
-            run_with_spinner "$fn" "$LAST_CMD" "$EXIT_CODE" "$CONTEXT" | render_markdown
+        if [ $# -ge 2 ] && [[ "$2" =~ ^[0-9]+$ ]]; then
+            shift
+            EXIT_CODE="${1:-1}"
+            LAST_CMD="$2"
+            CONTEXT="$3"
+            fn="backend_${ACTIVE_BACKEND}_fix"
+            if type "$fn" >/dev/null 2>&1; then
+                run_with_spinner "$fn" "$LAST_CMD" "$EXIT_CODE" "$CONTEXT" | render_markdown
+            else
+                echo "Error: Backend '$ACTIVE_BACKEND' does not support fix." >&2
+                exit 1
+            fi
         else
-            echo "Error: Backend '$ACTIVE_BACKEND' does not support fix." >&2
-            exit 1
+            PROMPT="$*"
+            fn="backend_${ACTIVE_BACKEND}_ask"
+            if type "$fn" >/dev/null 2>&1; then
+                handle_ask_with_memory "$fn" "$PROMPT"
+            else
+                echo "Error: Unknown backend '$ACTIVE_BACKEND'" >&2
+                exit 1
+            fi
         fi
         ;;
 

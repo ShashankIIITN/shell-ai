@@ -56,7 +56,7 @@ backend_custom_interactive() {
     if [ -n "$SHELL_AI_CUSTOM_INTERACTIVE_CMD" ]; then
         # Interactive commands may legitimately need shell features; document clearly
         # shellcheck disable=SC2086
-        exec $SHELL_AI_CUSTOM_INTERACTIVE_CMD
+        $SHELL_AI_CUSTOM_INTERACTIVE_CMD
     else
         echo "No interactive command configured for custom backend." >&2
     fi

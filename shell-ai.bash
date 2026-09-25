@@ -52,6 +52,7 @@ fix-last() {
     # Use the status captured by PROMPT_COMMAND before any function overhead
     local last_status="${_SHELL_AI_LAST_STATUS:-$?}"
     local last_cmd
-    last_cmd="$(HISTTIMEFORMAT='' history 1 | sed -e 's/^[ ]*[0-9]*[ ]*//')"
+    # Get last two commands, ignore the fix invocation itself, and grab the most recent real command
+    last_cmd="$(HISTTIMEFORMAT='' history 2 | sed -e 's/^[ ]*[0-9]*[ ]*//' | grep -vE '^(fix-last|shell-ai fix|%ai fix|@ai fix)' | tail -n 1)"
     shell-ai fix "$last_status" "$last_cmd"
 }
