@@ -105,7 +105,7 @@ fi
 if [ -t 0 ] && [ -f "$CONFIG_DIR/config" ]; then
     echo ""
     echo -e "${YELLOW}${BOLD}==> Interactive Setup${RESET}"
-    read -p "Would you like to configure shell-ai now? [Y/n]: " do_setup
+    read -r -p "Would you like to configure shell-ai now? [Y/n]: " do_setup
     if [[ ! "$do_setup" =~ ^[Nn] ]]; then
         # Default backend
         echo ""
@@ -114,7 +114,7 @@ if [ -t 0 ] && [ -f "$CONFIG_DIR/config" ]; then
         echo -e "  2) agy     (Google Antigravity)"
         echo -e "  3) claude  (Anthropic)"
         echo -e "  4) copilot (GitHub CLI)"
-        read -p "Choice [1]: " b_choice
+        read -r -p "Choice [1]: " b_choice
         case "$b_choice" in
             2) sel_backend="agy" ;;
             3) sel_backend="claude" ;;
@@ -125,7 +125,7 @@ if [ -t 0 ] && [ -f "$CONFIG_DIR/config" ]; then
         
         # If ollama, prompt for model
         if [ "$sel_backend" = "ollama" ]; then
-            read -p "Ollama model [qwen3-4b:latest]: " o_model
+            read -r -p "Ollama model [qwen3-4b:latest]: " o_model
             o_model="${o_model:-qwen3-4b:latest}"
             sed -i "s/^export SHELL_AI_OLLAMA_MODEL=.*/export SHELL_AI_OLLAMA_MODEL=\"$o_model\"/" "$CONFIG_DIR/config"
         fi
@@ -137,7 +137,7 @@ if [ -t 0 ] && [ -f "$CONFIG_DIR/config" ]; then
         echo -e "  2) ,   (e.g. ,ai, ,ollama)"
         echo -e "  3) %   (e.g. %ai - Note: clunky in non-interactive scripts)"
         echo -e "  4) ??  (e.g. ?? write a story)"
-        read -p "Choice [1]: " p_choice
+        read -r -p "Choice [1]: " p_choice
         case "$p_choice" in
             2) sel_prefix="," ;;
             3) sel_prefix="%" ;;

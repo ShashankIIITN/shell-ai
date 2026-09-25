@@ -546,6 +546,10 @@ case "$ACTION" in
             if type "$fn" >/dev/null 2>&1; then
                 run_with_spinner "$fn" "$LAST_CMD" "$EXIT_CODE" "$CONTEXT" | render_markdown
             else
+                echo "Error: Backend '$ACTIVE_BACKEND' does not support fix." >&2
+                exit 1
+            fi
+        else
             PROMPT="$*"
             fn="backend_${ACTIVE_BACKEND}_ask"
             if type "$fn" >/dev/null 2>&1; then
