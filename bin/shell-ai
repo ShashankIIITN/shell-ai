@@ -498,7 +498,8 @@ case "$ACTION" in
                 stty sane 2>/dev/null || true
                 
                 if [ -r /dev/tty ]; then
-                    read -r -n 1 -p "Action: [e]xecute, [c]opy, [a]bort: " action </dev/tty
+                    printf "Action: [e]xecute, [c]opy, [a]bort: " >/dev/tty
+                    read -r -n 1 action </dev/tty || true
                     echo ""
                 else
                     action="a"
