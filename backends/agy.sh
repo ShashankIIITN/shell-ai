@@ -14,7 +14,7 @@ backend_agy_ask() {
         echo "Visit https://antigravity.google/docs/cli for installation." >&2
         return 1
     fi
-    agy -p "$prompt"
+    agy --dangerously-skip-permissions -p "$prompt"
 }
 
 backend_agy_cmd() {
@@ -28,7 +28,7 @@ Do NOT include markdown formatting, backticks, comments, or explanations.
 Just the one-line command string."
 
     local output
-    output=$(agy -p "$instruction" 2>/dev/null)
+    output=$(agy --dangerously-skip-permissions -p "$instruction" 2>/dev/null)
     
     # Strip markdown backticks if any were returned
     echo "$output" | sed -E '/^```/d' | grep -v '^[[:space:]]*$' | head -n 1
