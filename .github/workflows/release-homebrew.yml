@@ -1,0 +1,49 @@
+name: Release to Homebrew
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-homebrew-tap:
+    name: Update Homebrew Tap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Homebrew tap updates
+        env:
+          TAP_REPO: ShashankIIITN/homebrew-tap  # CHANGE THIS to your tap repo
+          TAP_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }} # You need to create this secret
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "Skipping Homebrew Tap update as TAP_GITHUB_TOKEN is not set."
+            exit 0
+          fi
+          
+          VERSION="${GITHUB_REF_NAME#v}"
+          TARBALL_URL="https://github.com/${{ github.repository }}/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          
+          # Download tarball to get SHA
+          curl -sL $TARBALL_URL -o source.tar.gz
+          SHA256=$(sha256sum source.tar.gz | awk '{print $1}')
+          
+          # Clone Tap Repository
+          git clone https://x-access-token:${TAP_TOKEN}@github.com/${TAP_REPO}.git tap-repo
+          cd tap-repo
+          
+          # Configure Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Replace formula fields
+          mkdir -p Formula
+          cp ../packaging/homebrew/shell-ai.rb Formula/shell-ai.rb
+          sed -i "s|url .*|url \"$TARBALL_URL\"|" Formula/shell-ai.rb
+          sed -i "s|sha256 .*|sha256 \"$SHA256\"|" Formula/shell-ai.rb
+          
+          # Commit and Push
+          git add Formula/shell-ai.rb
+          git commit -m "Bump shell-ai to $VERSION" || echo "No changes to commit"
+          git push

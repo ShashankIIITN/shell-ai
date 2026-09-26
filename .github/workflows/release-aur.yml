@@ -1,0 +1,28 @@
+name: Release to AUR
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish-aur:
+    name: Publish to AUR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@v2.7.2
+        env:
+          # You need to configure these secrets in your repository
+          AUR_BOT_SECRET: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          AUR_BOT_USERNAME: ${{ secrets.AUR_USERNAME }}
+        with:
+          pkgname: shell-ai-git
+          pkgbuild: packaging/aur/PKGBUILD
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: Update AUR package
+          ssh_keyscan_types: rsa,ecdsa,ed25519

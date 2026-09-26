@@ -1,0 +1,39 @@
+name: Release Debian Package
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-attach-deb:
+    name: Build Debian Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Debian packaging tools
+        run: sudo apt-get update && sudo apt-get install -y build-essential debhelper devscripts
+
+      - name: Build .deb package
+        run: |
+          # Copy source to a folder named correctly for debuild
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p build/shell-ai-${VERSION}
+          rsync -a --exclude=build ./ build/shell-ai-${VERSION}/
+          
+          # Move debian folder into the source tree
+          cp -r packaging/apt/debian build/shell-ai-${VERSION}/
+          
+          # Build the package
+          cd build/shell-ai-${VERSION}
+          debuild -us -uc
+          cd ..
+          
+          # Rename the artifact for clarity
+          mv shell-ai_*_all.deb shell-ai_${VERSION}_all.deb
+
+      - name: Upload .deb to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/*.deb

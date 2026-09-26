@@ -1,0 +1,16 @@
+Source: shell-ai
+Section: utils
+Priority: optional
+Maintainer: Shashank <your_email@example.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.1
+Homepage: https://github.com/ShashankIIITN/shell-ai
+
+Package: shell-ai
+Architecture: all
+Depends: ${misc:Depends}, bash, curl
+Description: A language-agnostic CLI tool that brings AI into your terminal
+ shell-ai turns your everyday terminal prompt into an AI-powered workspace.
+ Instead of opening a browser or switching windows, you can query AI directly
+ in your prompt. Once the response is delivered, full terminal control is
+ instantly handed back to you.
