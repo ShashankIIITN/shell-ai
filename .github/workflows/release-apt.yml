@@ -25,6 +25,9 @@ jobs:
           # Move debian folder into the source tree
           cp -r packaging/apt/debian build/shell-ai-${VERSION}/
           
+          # Dynamically update the version in the debian/changelog
+          sed -i "1s/.*/shell-ai (${VERSION}-1) unstable; urgency=medium/" build/shell-ai-${VERSION}/debian/changelog
+          
           # Build the package
           cd build/shell-ai-${VERSION}
           debuild -us -uc

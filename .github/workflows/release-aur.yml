@@ -11,6 +11,11 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Update PKGBUILD version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -i "s/^pkgver=.*/pkgver=$VERSION/" packaging/aur/PKGBUILD
       
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.2
