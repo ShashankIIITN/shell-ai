@@ -28,8 +28,12 @@ jobs:
           # Dynamically update the version in the debian/changelog
           sed -i "1s/.*/shell-ai (${VERSION}-1) unstable; urgency=medium/" build/shell-ai-${VERSION}/debian/changelog
           
+          # Create the .orig.tar.gz tarball to satisfy Debian packaging rules
+          cd build
+          tar -czf shell-ai_${VERSION}.orig.tar.gz shell-ai-${VERSION}
+          
           # Build the package
-          cd build/shell-ai-${VERSION}
+          cd shell-ai-${VERSION}
           debuild -us -uc -b
           cd ..
           
