@@ -506,7 +506,10 @@ case "$ACTION" in
                 
                 case "$action" in
                     [eE]*) 
+                        # Temporarily disable set -e or use || true so we don't abort before restoring stty
+                        set +e
                         eval "$RAW_CMD"
+                        set -e
                         stty "$old_stty" 2>/dev/null || true
                         ;;
                     [cC]*) 
