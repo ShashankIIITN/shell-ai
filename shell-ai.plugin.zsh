@@ -68,7 +68,7 @@ _shell_ai_accept_line() {
         zle -I
         print ""
         print -P "%F{yellow}🔍 shell-ai: diagnosing failed command:%f $last_cmd"
-        shell-ai fix "$last_status" "$last_cmd" "$query"
+        shell-ai fix "$last_status" "$last_cmd" "$query" </dev/tty
         BUFFER=""
         zle redisplay
         return
@@ -84,11 +84,11 @@ _shell_ai_accept_line() {
             zle -I
             print ""
             if [[ -z "$query" ]]; then
-                shell-ai interactive "$backend"
+                shell-ai interactive "$backend" </dev/tty
             else
                 local -a args
                 args=("${(@Q)${(z)query}}")
-                BACKEND_OVERRIDE="$backend" shell-ai "${args[@]}"
+                BACKEND_OVERRIDE="$backend" shell-ai "${args[@]}" </dev/tty
             fi
             BUFFER=""
             zle redisplay
@@ -110,11 +110,11 @@ _shell_ai_accept_line() {
         zle -I
         print ""
         if [[ -z "$query" ]]; then
-            shell-ai interactive
+            shell-ai interactive </dev/tty
         else
             local -a args
             args=("${(@Q)${(z)query}}")
-            shell-ai "${args[@]}"
+            shell-ai "${args[@]}" </dev/tty
         fi
         BUFFER=""
         zle redisplay
