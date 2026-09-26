@@ -515,10 +515,10 @@ case "$ACTION" in
                         ;;
                     [cC]*) 
                         stty "$old_stty" 2>/dev/null || true
-                        if command -v pbcopy >/dev/null 2>&1; then echo "$RAW_CMD" | pbcopy
-                        elif command -v xclip >/dev/null 2>&1; then echo "$RAW_CMD" | xclip -sel clip
-                        elif command -v wl-copy >/dev/null 2>&1; then echo "$RAW_CMD" | wl-copy
-                        else echo "No clipboard tool found (pbcopy/xclip/wl-copy)."; fi
+                        if command -v pbcopy >/dev/null 2>&1; then printf "%s" "$RAW_CMD" | pbcopy && echo "Copied to clipboard." || echo "Failed to copy."
+                        elif command -v wl-copy >/dev/null 2>&1; then printf "%s" "$RAW_CMD" | wl-copy && echo "Copied to clipboard." || echo "Failed to copy."
+                        elif command -v xclip >/dev/null 2>&1; then printf "%s" "$RAW_CMD" | xclip -selection clipboard && echo "Copied to clipboard." || echo "Failed to copy."
+                        else echo "No clipboard tool found (pbcopy/wl-copy/xclip)."; fi
                         ;;
                     *) 
                         stty "$old_stty" 2>/dev/null || true
