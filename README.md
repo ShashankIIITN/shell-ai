@@ -75,48 +75,59 @@ $ @ai -nc write a story
 
 ## 🚀 Installation
 
-### Option 1: One-Line Quick Install (with Interactive Setup)
+### Option 1: macOS / Linux (Homebrew)
+```bash
+brew tap ShashankIIITN/homebrew-tap
+brew install shell-ai
+```
+
+### Option 2: Debian / Ubuntu (APT)
+You can download the latest `.deb` package directly from the [Releases page](https://github.com/ShashankIIITN/shell-ai/releases) and install it:
+```bash
+sudo dpkg -i shell-ai_*_all.deb
+sudo apt-get install -f # Install missing dependencies if any
+```
+
+### Option 3: Arch Linux (AUR)
+```bash
+yay -S shell-ai-git
+```
+*(Or use `paru` or `makepkg`)*
+
+### Option 4: Quick Install Script (All platforms)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ShashankIIITN/shell-ai/main/install.sh | bash
 ```
 > **Note:** If run in a standard terminal (TTY), the installer will launch a quick interactive wizard allowing you to choose your default backend, local model, and preferred trigger prefix!
 
-### Option 2: Oh-My-Zsh
-1. Clone the repository into your custom plugins directory:
-   ```bash
-   git clone https://github.com/ShashankIIITN/shell-ai.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/shell-ai
-   ```
-2. Add `shell-ai` to your `plugins` list in `~/.zshrc`:
-   ```zsh
-   plugins=(... git shell-ai)
-   ```
-3. Reload your shell:
-   ```bash
-   source ~/.zshrc
-   ```
-
-### Option 3: Zinit
-Add this line to your `~/.zshrc`:
+### Option 5: Zsh Plugin Managers
+**Oh-My-Zsh:**
+```bash
+git clone https://github.com/ShashankIIITN/shell-ai.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/shell-ai
+# Add `shell-ai` to your plugins list in ~/.zshrc: plugins=(... shell-ai)
+```
+**Zinit:**
 ```zsh
 zinit light ShashankIIITN/shell-ai
 ```
 
-### Option 4: Manual Zsh / Bash
+### Option 6: Manual Shell Source
 Clone the repository:
 ```bash
 git clone https://github.com/ShashankIIITN/shell-ai.git ~/.shell-ai
 ```
-
 For **Zsh**, add to `~/.zshrc`:
 ```zsh
 source ~/.shell-ai/shell-ai.plugin.zsh
 ```
-
 For **Bash**, add to `~/.bashrc`:
 ```bash
 source ~/.shell-ai/shell-ai.bash
 ```
-
+For **Fish**, add to `~/.config/fish/config.fish`:
+```fish
+source ~/.shell-ai/shell-ai.fish
+```
 ---
 
 ## ⚙️ Configuration
