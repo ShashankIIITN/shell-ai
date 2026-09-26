@@ -30,7 +30,7 @@ jobs:
           
           # Build the package
           cd build/shell-ai-${VERSION}
-          debuild -us -uc
+          debuild -us -uc -b
           cd ..
           
           # Rename the artifact for clarity
