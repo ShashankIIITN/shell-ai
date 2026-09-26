@@ -5,7 +5,7 @@
 set -e
 
 # Version
-SHELL_AI_VERSION="2.1.0"
+SHELL_AI_VERSION="2.2.0"
 
 # Find root directory
 SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
@@ -35,7 +35,7 @@ else
 fi
 
 # Load backend adapters
-for b in "$SHELL_AI_ROOT"/backends/*.sh; do
+for b in "$SHELL_AI_ROOT"/backends/*.sh /usr/share/shell-ai/backends/*.sh /usr/local/share/shell-ai/backends/*.sh /opt/homebrew/share/shell-ai/backends/*.sh; do
     if [ -f "$b" ]; then
         # shellcheck source=/dev/null
         source "$b"

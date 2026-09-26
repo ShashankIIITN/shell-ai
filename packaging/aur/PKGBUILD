@@ -1,0 +1,38 @@
+# Maintainer: Shashank <your_email@example.com>
+pkgname=shell-ai-git
+pkgver=2.2.0
+pkgrel=1
+pkgdesc="A language-agnostic CLI tool that brings AI into your terminal (Bash, Zsh, Fish)."
+arch=('any')
+url="https://github.com/ShashankIIITN/shell-ai"
+license=('MIT')
+depends=('bash' 'curl')
+optdepends=(
+    'fzf: For interactive shell-ai UI selection'
+    'gum: For beautiful interactive TUI elements'
+    'ollama: For local model inference'
+)
+provides=('shell-ai')
+conflicts=('shell-ai')
+source=("git+https://github.com/ShashankIIITN/shell-ai.git")
+md5sums=('SKIP')
+
+pkgver() {
+    cd "\$srcdir/shell-ai"
+    git describe --long --tags | sed 's/\\([^-]*-g\\)/r\\1/;s/-/./g' | sed 's/^v//'
+}
+
+package() {
+    cd "\$srcdir/shell-ai"
+    
+    # Install binary
+    install -Dm755 bin/shell-ai "\$pkgdir/usr/bin/shell-ai"
+    
+    # Install backend plugins
+    install -Dm644 backends/*.sh -t "\$pkgdir/usr/share/shell-ai/backends/"
+    
+    # Install shell integration plugins
+    install -Dm644 shell-ai.plugin.zsh "\$pkgdir/usr/share/shell-ai/"
+    install -Dm644 shell-ai.bash "\$pkgdir/usr/share/shell-ai/"
+    install -Dm644 shell-ai.fish "\$pkgdir/usr/share/shell-ai/"
+}
