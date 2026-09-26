@@ -1,0 +1,5 @@
+bin/shell-ai usr/bin
+backends/*.sh usr/share/shell-ai/backends
+shell-ai.bash usr/share/shell-ai
+shell-ai.fish usr/share/shell-ai
+shell-ai.plugin.zsh usr/share/shell-ai
